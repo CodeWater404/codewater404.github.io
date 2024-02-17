@@ -31,7 +31,7 @@
 <meta property="og:description" content="Talk is cheap , show me the code!">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2024-02-16T14:07:08.000Z">
-<meta property="article:modified_time" content="2024-02-16T15:42:24.899Z">
+<meta property="article:modified_time" content="2024-02-17T08:56:56.316Z">
 <meta property="article:author" content="Code Water">
 <meta name="twitter:card" content="summary">
 
@@ -207,6 +207,7 @@
 
           </div>
           
+    <div class="comments" id="gitalk-container"></div>
 
 <script>
   window.addEventListener('tabs:register', () => {
@@ -413,6 +414,26 @@ $(document).ready(function() {
   
 
   
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '51d80812d0893d881403',
+      clientSecret: '90b5b7396136066a177432adae54af452cf7f876',
+      repo        : 'codewater404.github.io',
+      owner       : 'CodeWater404',
+      admin       : ['CodeWater404'],
+      id          : '6832305cd786a032b1ef29b5ebc6f59d',
+        language: '',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
 
 </body>
 </html>

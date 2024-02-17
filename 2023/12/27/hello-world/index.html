@@ -298,6 +298,7 @@
 
           </div>
           
+    <div class="comments" id="gitalk-container"></div>
 
 <script>
   window.addEventListener('tabs:register', () => {
@@ -505,6 +506,26 @@ $(document).ready(function() {
   
 
   
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '51d80812d0893d881403',
+      clientSecret: '90b5b7396136066a177432adae54af452cf7f876',
+      repo        : 'codewater404.github.io',
+      owner       : 'CodeWater404',
+      admin       : ['CodeWater404'],
+      id          : '7fe727794e21bcaff808543e54512795',
+        language: '',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
 
 </body>
 </html>
