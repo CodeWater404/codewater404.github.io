@@ -1197,7 +1197,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #01a3ff;
+  background: #960dff;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -1306,7 +1306,7 @@ pre .javascript .function {
   bottom: 45px;
   cursor: pointer;
   height: 14px;
-  left: 30px;
+  left: 1465px;
   padding: 5px;
   position: fixed;
   width: 14px;
@@ -1517,7 +1517,7 @@ pre .javascript .function {
   box-sizing: border-box;
   color: #fff;
   cursor: pointer;
-  left: 30px;
+  left: 1465px;
   opacity: 0.6;
   padding: 0 6px;
   position: fixed;
@@ -2339,11 +2339,11 @@ ul.breadcrumb li + li:last-child {
   padding: 0;
   position: absolute;
   top: 0;
-  width: 240px;
+  width: 320px;
 }
 @media (min-width: 1200px) {
   .header-inner {
-    width: 240px;
+    width: 320px;
   }
 }
 @media (max-width: 991px) {
@@ -2369,7 +2369,7 @@ ul.breadcrumb li + li:last-child {
   box-shadow: 0 2px 2px 0 rgba(0,0,0,0.12), 0 3px 1px -2px rgba(0,0,0,0.06), 0 1px 5px 0 rgba(0,0,0,0.12);
   box-sizing: border-box;
   padding: 40px;
-  width: calc(100% - 260px);
+  width: calc(100% - 340px);
 }
 @media (max-width: 991px) {
   .content-wrap {
@@ -2382,7 +2382,7 @@ ul.breadcrumb li + li:last-child {
   right: 0;
 }
 .book-mark-link {
-  left: 30px;
+  left: 1465px;
 }
 .footer-inner {
   padding-right: 260px;
@@ -2508,7 +2508,7 @@ ul.breadcrumb li + li:last-child {
   box-shadow: none;
   margin-top: 100%;
   position: static;
-  width: 240px;
+  width: 320px;
 }
 @media (max-width: 991px) {
   .sidebar {
@@ -2524,7 +2524,7 @@ ul.breadcrumb li + li:last-child {
   box-shadow: 0 2px 2px 0 rgba(0,0,0,0.12), 0 3px 1px -2px rgba(0,0,0,0.06), 0 1px 5px 0 rgba(0,0,0,0.12), 0 -1px 0.5px 0 rgba(0,0,0,0.09);
   box-sizing: border-box;
   color: var(--text-color);
-  width: 240px;
+  width: 320px;
   opacity: 0;
 }
 .sidebar-inner.affix {
