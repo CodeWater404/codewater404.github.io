@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://blog.codewater.top/tldr/</loc>
+    <lastmod>2025-03-24</lastmod>
+  </url>
+  <url>
     <loc>https://blog.codewater.top/cli%E4%B8%AD%E9%9B%86%E6%88%90ai-%E4%BB%A5deepseek%E4%B8%BA%E4%BE%8B/</loc>
     <lastmod>2025-02-06</lastmod>
   </url>
@@ -31,10 +35,6 @@
   <url>
     <loc>https://blog.codewater.top/hello-world/</loc>
     <lastmod>2024-10-25</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/tldr/</loc>
-    <lastmod>2024-10-23</lastmod>
   </url>
   <url>
     <loc>https://blog.codewater.top/codewater-first-post-hexo/</loc>
