@@ -65,7 +65,7 @@
   </url>
   
   <url>
-    <loc>https://blog.codewater.top/Git-submodule%E5%B8%B8%E8%A7%81%E6%93%8D%E4%BD%9C%E7%94%A8%E6%B3%95/</loc>
+    <loc>https://blog.codewater.top/Git-view-the-history-of-the-specified-code-block/</loc>
     
     <lastmod>2025-05-28</lastmod>
     
@@ -74,7 +74,7 @@
   </url>
   
   <url>
-    <loc>https://blog.codewater.top/Git-view-the-history-of-the-specified-code-block/</loc>
+    <loc>https://blog.codewater.top/Git-submodule%E5%B8%B8%E8%A7%81%E6%93%8D%E4%BD%9C%E7%94%A8%E6%B3%95/</loc>
     
     <lastmod>2025-05-28</lastmod>
     
@@ -153,13 +153,6 @@
   </url>
   
   <url>
-    <loc>https://blog.codewater.top/tags/submodule/</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://blog.codewater.top/tags/blame/</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>weekly</changefreq>
@@ -168,6 +161,13 @@
   
   <url>
     <loc>https://blog.codewater.top/tags/history/</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/submodule/</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -295,6 +295,13 @@
   </url>
   
   <url>
+    <loc>https://blog.codewater.top/categories/test/</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
     <loc>https://blog.codewater.top/categories/golang/</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>weekly</changefreq>
@@ -302,7 +309,7 @@
   </url>
   
   <url>
-    <loc>https://blog.codewater.top/categories/test/</loc>
+    <loc>https://blog.codewater.top/categories/ai/deepseek/</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -317,13 +324,6 @@
   
   <url>
     <loc>https://blog.codewater.top/categories/tools/</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://blog.codewater.top/categories/ai/deepseek/</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
