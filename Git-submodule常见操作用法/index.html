@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.0.0">
+<meta name="google-site-verification" content="PmhPZpNZ6fYQ2biJJyWY_aOl8snCv9ynyC7UGvbgoUE" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-c.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-c.jpg">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.codewater.top","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"right","width":320,"display":"post","padding":20,"offset":20,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":-1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+
+  <meta name="description" content="背景某个工作中的项目需要包含并使用另一个项目，也许是第三方库，或者你独立开发的。 现在问题来了：你想要把它们当做两个独立的项目，同时又想在一个项目中使用另一个库。Git submodule 就是为了解决这个问题而生的,它允许你将一个仓库作为另一个仓库的子模块,同时让这两个库保持独立的提交记录。这里记录一下submodule常见操作用法，方便以后查阅。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Git: submodule常见操作用法">
+<meta property="og:url" content="https://blog.codewater.top/Git-submodule%E5%B8%B8%E8%A7%81%E6%93%8D%E4%BD%9C%E7%94%A8%E6%B3%95/index.html">
+<meta property="og:site_name" content="共建代码世界，践行开源精神">
+<meta property="og:description" content="背景某个工作中的项目需要包含并使用另一个项目，也许是第三方库，或者你独立开发的。 现在问题来了：你想要把它们当做两个独立的项目，同时又想在一个项目中使用另一个库。Git submodule 就是为了解决这个问题而生的,它允许你将一个仓库作为另一个仓库的子模块,同时让这两个库保持独立的提交记录。这里记录一下submodule常见操作用法，方便以后查阅。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-01-07T06:45:29.000Z">
+<meta property="article:modified_time" content="2025-05-28T14:42:00.412Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="submodule">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.codewater.top/Git-submodule%E5%B8%B8%E8%A7%81%E6%93%8D%E4%BD%9C%E7%94%A8%E6%B3%95/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Git: submodule常见操作用法 | 共建代码世界，践行开源精神</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">共建代码世界，践行开源精神</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">阿水</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-resources">
+
+    <a href="/resources/" rel="section"><i class="fa fa-download fa-fw"></i>资源</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.codewater.top/Git-submodule%E5%B8%B8%E8%A7%81%E6%93%8D%E4%BD%9C%E7%94%A8%E6%B3%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Code Water">
+      <meta itemprop="description" content="Talk is cheap , show me the code!">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="共建代码世界，践行开源精神">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Git: submodule常见操作用法
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2025-01-07 14:45:29" itemprop="dateCreated datePublished" datetime="2025-01-07T14:45:29+08:00">2025-01-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-05-28 22:42:00" itemprop="dateModified" datetime="2025-05-28T22:42:00+08:00">2025-05-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/git/" itemprop="url" rel="index"><span itemprop="name">git</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>某个工作中的项目需要包含并使用另一个项目，也许是第三方库，或者你独立开发的。 现在问题来了：你想要把它们当做两个独立的项目，同时又想在一个项目中使用另一个库。<br><code>Git submodule</code> 就是为了解决这个问题而生的,它允许你将一个仓库作为另一个仓库的子模块,同时让这两个库保持独立的提交记录。<br>这里记录一下submodule常见操作用法，方便以后查阅。</p>
+<span id="more"></span>
+
+<h1 id="git-submodule"><a href="#git-submodule" class="headerlink" title="git submodule"></a>git submodule</h1><h2 id="1-添加子仓库"><a href="#1-添加子仓库" class="headerlink" title="1. 添加子仓库"></a>1. 添加子仓库</h2><p>要将一个现有的 Git 仓库添加为子仓库，可以使用 <code>git submodule add</code> 命令。</p>
+<p>操作步骤：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule add &lt;repository_url&gt; &lt;path&gt;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>&lt;repository_url&gt;</code>：子仓库的 Git 仓库地址。</li>
+<li><code>&lt;path&gt;</code>：子仓库在主仓库中的存放路径。</li>
+</ul>
+<p><strong>示例</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule add https://github.com/example/libfoo.git libs/libfoo</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-初始化子仓库"><a href="#2-初始化子仓库" class="headerlink" title="2. 初始化子仓库"></a>2. 初始化子仓库</h2><p>如果你克隆了一个包含子仓库的主仓库，你需要初始化子仓库。</p>
+<p>操作步骤：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule init</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-更新子仓库"><a href="#3-更新子仓库" class="headerlink" title="3. 更新子仓库"></a>3. 更新子仓库</h2><p>初始化后，你需要更新子仓库以获取其内容。</p>
+<p>操作步骤：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule update</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>当然，上面两个步骤可以合并为一个命令： <code>git submodule update --init</code></p>
+</blockquote>
+<h2 id="4-查看子仓库状态"><a href="#4-查看子仓库状态" class="headerlink" title="4. 查看子仓库状态"></a>4. 查看子仓库状态</h2><p>要查看子仓库的状态，可以使用以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule status</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-更新子仓库到最新版本"><a href="#5-更新子仓库到最新版本" class="headerlink" title="5. 更新子仓库到最新版本"></a>5. 更新子仓库到最新版本</h2><p>如果子仓库有更新，你可以进入<strong>子仓库目录并拉取最新的更改</strong>。</p>
+<p>操作步骤：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> &lt;path_to_submodule&gt;</span><br><span class="line">git pull origin master</span><br></pre></td></tr></table></figure>
+
+<h2 id="6-提交对子仓库的更改"><a href="#6-提交对子仓库的更改" class="headerlink" title="6. 提交对子仓库的更改"></a>6. 提交对子仓库的更改</h2><p>如果你在子仓库中做了更改并希望将其提交到主仓库，你需要先在子仓库中提交更改，然后在主仓库中更新子仓库的引用。</p>
+<p>操作步骤：</p>
+<ol>
+<li>在<strong>子仓库</strong>中提交更改:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git add .</span><br><span class="line">git commit -m <span class="string">&quot;Update submodule&quot;</span></span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>返回<strong>主仓库</strong>并更新子仓库引用:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> ..</span><br><span class="line">git add &lt;path_to_submodule&gt;</span><br><span class="line">git commit -m <span class="string">&quot;Update submodule reference&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-删除子仓库"><a href="#7-删除子仓库" class="headerlink" title="7. 删除子仓库"></a>7. 删除子仓库</h2><p>如果你想要删除子仓库，可以按照以下步骤操作：</p>
+<ol>
+<li>从主仓库中删除子仓库的引用：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">rm</span> --cached &lt;path_to_submodule&gt;</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>删除子仓库的目录：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> -rf &lt;path_to_submodule&gt;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>提交更改：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git commit -m <span class="string">&quot;Remove submodule&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="8-克隆包含子仓库的主仓库"><a href="#8-克隆包含子仓库的主仓库" class="headerlink" title="8. 克隆包含子仓库的主仓库"></a>8. 克隆包含子仓库的主仓库</h2><p>如果你想要克隆一个包含子仓库的主仓库，可以使用以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --recurse-submodules &lt;repository_url&gt;</span><br></pre></td></tr></table></figure>
+
+<p>如果已经克隆了主仓库，可以使用以下命令初始化和更新子仓库：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule update --init --recursive</span><br></pre></td></tr></table></figure>
+
+<h1 id="git-submodule-update-和在子仓库中执行git-pull-origin-master-的区别？"><a href="#git-submodule-update-和在子仓库中执行git-pull-origin-master-的区别？" class="headerlink" title="git submodule update 和在子仓库中执行git pull origin master 的区别？"></a><code>git submodule update</code> 和在子仓库中执行<code>git pull origin master</code> 的区别？</h1><p>如读者所见，上面关于子仓库的更新有两种方式：</p>
+<ul>
+<li>update：使用 <code>git submodule update</code> 命令更新子仓库</li>
+<li>pull：在子仓库中执行 <code>git pull origin master</code> 命令更新子仓库</li>
+</ul>
+<p>那这两种区别是啥？以下是这两个命令的详细比较：</p>
+<h2 id="git-submodule-update"><a href="#git-submodule-update" class="headerlink" title="git submodule update"></a><code>git submodule update</code></h2><h3 id="目的"><a href="#目的" class="headerlink" title="目的"></a>目的</h3><ul>
+<li><code>git submodule update</code> 用于将子模块的状态<u>更新到主仓库所记录的特定提交</u>。这意味着它会<strong>将子模块检出到主仓库中记录的提交哈希值</strong>。</li>
+</ul>
+<h3 id="行为"><a href="#行为" class="headerlink" title="行为"></a>行为</h3><ul>
+<li>当你在主仓库中执行 <code>git submodule update</code> 时，Git 会检查 <code>.gitmodules</code> 文件和主仓库的索引，找到每个子模块的最新提交哈希值，并将子模块的工作目录更新到这些特定的提交。</li>
+<li>如果子模块的工作目录中有未提交的更改，<code>git submodule update</code> 不会影响这些更改，但它会将子模块的 HEAD 指针移动到主仓库所记录的提交。</li>
+<li>另外，update这个命令并不需要在子模块中执行，它也可以在主仓库中执行。</li>
+</ul>
+<h2 id="git-pull-origin-master-在子仓库中执行"><a href="#git-pull-origin-master-在子仓库中执行" class="headerlink" title="git pull origin master 在子仓库中执行"></a><code>git pull origin master</code> 在子仓库中执行</h2><h3 id="目的-1"><a href="#目的-1" class="headerlink" title="目的"></a>目的</h3><ul>
+<li><code>git pull origin master</code> 用于从远程仓库拉取最新的提交并合并到当前分支。这是一个常规的 Git 操作，用于更新子模块的内容。</li>
+<li>pull这个命令必须在子模块中执行，才是对子仓库的更新；如果在主仓库中执行，那么就是对主仓库的更新。</li>
+</ul>
+<h3 id="行为-1"><a href="#行为-1" class="headerlink" title="行为"></a>行为</h3><ul>
+<li>当你在子模块中执行 <code>git pull origin master</code> 时，Git 会从远程仓库拉取最新的提交，并将这些提交合并到当前分支。这可能会导致子模块的 HEAD 指针移动到远程仓库的最新提交。</li>
+<li>这个操作会改变子模块的状态，并可能导致主仓库中的子模块引用与子模块的实际状态不一致。</li>
+</ul>
+<p>实际上就是说：主仓库下的子仓库的状态并不一定与子仓库的最新状态保持一致！</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li>**<code>git submodule update</code>**：将子模块更新到主仓库所记录的特定提交，保持主仓库和子模块之间的引用一致。</li>
+<li>**<code>git pull origin master</code>**：从远程仓库拉取最新的提交并合并到当前分支，可能导致子模块的状态与主仓库中的引用不一致。</li>
+</ul>
+<h2 id="使用场景"><a href="#使用场景" class="headerlink" title="使用场景"></a>使用场景</h2><ul>
+<li>如果你想确保子模块的状态与主仓库的引用一致，使用 <code>git submodule update</code>。</li>
+<li>如果你想更新子模块到远程仓库的最新状态，并且不介意主仓库中的引用可能变得不一致，可以使用 <code>git pull origin master</code>。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Code Water
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.codewater.top/Git-submodule%E5%B8%B8%E8%A7%81%E6%93%8D%E4%BD%9C%E7%94%A8%E6%B3%95/" title="Git: submodule常见操作用法">https://blog.codewater.top/Git-submodule常见操作用法/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      
+        <div>
+          <div>
+    
+        <div style="text-align:center;color: #ccc;font-size:24px;">-------------------本文结束,感谢您的阅读!-------------------</div>
+    
+</div>
+        </div>
+      
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/submodule/" rel="tag"># submodule</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/Git-search-commits-by-all-branches/" rel="prev" title="Git: 跨分支搜索提交记录commits">
+      <i class="fa fa-chevron-left"></i> Git: 跨分支搜索提交记录commits
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/cli%E4%B8%AD%E9%9B%86%E6%88%90ai-%E4%BB%A5deepseek%E4%B8%BA%E4%BE%8B/" rel="next" title="cli中集成ai,以deepseek为例">
+      cli中集成ai,以deepseek为例 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-submodule"><span class="nav-text">git submodule</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%B7%BB%E5%8A%A0%E5%AD%90%E4%BB%93%E5%BA%93"><span class="nav-text">1. 添加子仓库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%88%9D%E5%A7%8B%E5%8C%96%E5%AD%90%E4%BB%93%E5%BA%93"><span class="nav-text">2. 初始化子仓库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%9B%B4%E6%96%B0%E5%AD%90%E4%BB%93%E5%BA%93"><span class="nav-text">3. 更新子仓库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E6%9F%A5%E7%9C%8B%E5%AD%90%E4%BB%93%E5%BA%93%E7%8A%B6%E6%80%81"><span class="nav-text">4. 查看子仓库状态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E6%9B%B4%E6%96%B0%E5%AD%90%E4%BB%93%E5%BA%93%E5%88%B0%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC"><span class="nav-text">5. 更新子仓库到最新版本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%8F%90%E4%BA%A4%E5%AF%B9%E5%AD%90%E4%BB%93%E5%BA%93%E7%9A%84%E6%9B%B4%E6%94%B9"><span class="nav-text">6. 提交对子仓库的更改</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E5%88%A0%E9%99%A4%E5%AD%90%E4%BB%93%E5%BA%93"><span class="nav-text">7. 删除子仓库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E5%85%8B%E9%9A%86%E5%8C%85%E5%90%AB%E5%AD%90%E4%BB%93%E5%BA%93%E7%9A%84%E4%B8%BB%E4%BB%93%E5%BA%93"><span class="nav-text">8. 克隆包含子仓库的主仓库</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-submodule-update-%E5%92%8C%E5%9C%A8%E5%AD%90%E4%BB%93%E5%BA%93%E4%B8%AD%E6%89%A7%E8%A1%8Cgit-pull-origin-master-%E7%9A%84%E5%8C%BA%E5%88%AB%EF%BC%9F"><span class="nav-text">git submodule update 和在子仓库中执行git pull origin master 的区别？</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#git-submodule-update"><span class="nav-text">git submodule update</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%AE%E7%9A%84"><span class="nav-text">目的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A1%8C%E4%B8%BA"><span class="nav-text">行为</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#git-pull-origin-master-%E5%9C%A8%E5%AD%90%E4%BB%93%E5%BA%93%E4%B8%AD%E6%89%A7%E8%A1%8C"><span class="nav-text">git pull origin master 在子仓库中执行</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%AE%E7%9A%84-1"><span class="nav-text">目的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A1%8C%E4%B8%BA-1"><span class="nav-text">行为</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-text">使用场景</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Code Water"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Code Water</p>
+  <div class="site-description" itemprop="description">Talk is cheap , show me the code!</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/CodeWater404" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;CodeWater404" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:dylanrieder@163.com" title="E-Mail → mailto:dylanrieder@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2023-12 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Code Water</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+
+    <script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <span id="busuanzi_container_site_pv">总访问量<span id="busuanzi_value_site_pv"></span>次</span>
+    <span class="post-meta-divider">|</span>
+    <span id="busuanzi_container_site_uv">总访客数<span id="busuanzi_value_site_uv"></span>人</span>
+    <span class="post-meta-divider">|</span>
+<!-- 不算子计数初始值纠正 -->
+<script>
+$(document).ready(function() {
+
+    var int = setInterval(fixCount, 50);  // 50ms周期检测函数
+    var countOffset = 20000;  // 初始化首次数据
+
+    function fixCount() {            
+       if (document.getElementById("busuanzi_container_site_pv").style.display != "none")
+        {
+            $("#busuanzi_value_site_pv").html(parseInt($("#busuanzi_value_site_pv").html()) + countOffset); 
+            clearInterval(int);
+        }                  
+        if ($("#busuanzi_container_site_pv").css("display") != "none")
+        {
+            $("#busuanzi_value_site_uv").html(parseInt($("#busuanzi_value_site_uv").html()) + countOffset); // 加上初始数据 
+            clearInterval(int); // 停止检测
+        }  
+    }
+       	
+});
+</script> 
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '51d80812d0893d881403',
+      clientSecret: '90b5b7396136066a177432adae54af452cf7f876',
+      repo        : 'codewater404.github.io',
+      owner       : 'CodeWater404',
+      admin       : ['CodeWater404'],
+      id          : '2be9b7af73a5959725a7a4f1644051e3',
+        language: '',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

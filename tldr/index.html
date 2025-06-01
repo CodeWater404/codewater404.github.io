@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
 <script id="hexo-configurations">
     var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"blog.codewater.top","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"right","width":320,"display":"post","padding":20,"offset":20,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":-1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+    var CONFIG = {"hostname":"blog.codewater.top","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"right","width":320,"display":"post","padding":20,"offset":20,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":-1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
 
@@ -30,7 +30,7 @@
 <meta property="og:description" content="tldr tldr: Too long, Don’t read，太长不想阅读。显示命令的常见用法，比–help或者man这些传统手册更便捷、更便于使用。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2024-07-20T15:01:47.000Z">
-<meta property="article:modified_time" content="2024-07-21T13:28:23.320Z">
+<meta property="article:modified_time" content="2025-05-28T14:42:00.442Z">
 <meta property="article:author" content="Code Water">
 <meta property="article:tag" content="linux">
 <meta property="article:tag" content="ubuntu">
@@ -237,7 +237,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-07-21 21:28:23" itemprop="dateModified" datetime="2024-07-21T21:28:23+08:00">2024-07-21</time>
+                <time title="修改时间：2025-05-28 22:42:00" itemprop="dateModified" datetime="2025-05-28T22:42:00+08:00">2025-05-28</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -282,6 +282,7 @@
 <p> <code>tldr</code>命令只会显示一些常用命令的使用示例，相当与一个笔记。</p>
 </li>
 </ol>
+<hr>
 <h1 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h1><ol>
 <li>ubuntu下：<code>apt install tldr </code>,如果没有安装权限，加上<code>sudo</code>。</li>
 <li>win下：<code>npm install -g tldr</code></li>
@@ -289,18 +290,27 @@
 <p>其余环境不在列出，可以参考官网或者执行谷歌解决。</p>
 <p><a target="_blank" rel="noopener" href="https://github.com/tldr-pages/tldr">官网</a></p>
 <p><a target="_blank" rel="noopener" href="https://developer.aliyun.com/article/1395256">参考</a></p>
+<hr>
 <h1 id="运行"><a href="#运行" class="headerlink" title="运行"></a>运行</h1><p>安装完成之后，直接使用<code>tldr &lt;command&gt;</code>就可以显示对用命令的常见用法。例如：</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">tldr ps</span><br><span class="line"></span><br><span class="line">ps</span><br><span class="line">Information about running processes.More information: https://manned.org/ps.</span><br><span class="line"></span><br><span class="line"> - List all running processes:</span><br><span class="line">   ps aux</span><br><span class="line"></span><br><span class="line"> - List all running processes including the full command string:</span><br><span class="line">   ps auxww</span><br><span class="line"></span><br><span class="line"> - Search for a process that matches a string (the brackets will prevent grep from matching itself):</span><br><span class="line">   ps aux | grep &#123;&#123;[s]tring&#125;&#125;</span><br><span class="line"></span><br><span class="line"> - List all processes of the current user in extra full format:</span><br><span class="line">   ps --user $(id -u) -F</span><br><span class="line"></span><br><span class="line"> - List all processes of the current user as a tree:</span><br><span class="line">   ps --user $(id -u) f</span><br><span class="line"></span><br><span class="line"> - Get the parent PID of a process:</span><br><span class="line">   ps -o ppid= -p &#123;&#123;pid&#125;&#125;</span><br><span class="line"></span><br><span class="line"> - Sort processes by memory consumption:</span><br><span class="line">   ps --sort size</span><br></pre></td></tr></table></figure>
 
 
-
-
-
+<hr>
 <h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><h2 id="No-tldr-entry-for-ls"><a href="#No-tldr-entry-for-ls" class="headerlink" title="No tldr entry for ls"></a>No tldr entry for ls</h2><p>这个问题是由于没有更新<code>tldr</code>的数据库，所以找不到的对应案例，解决也很简单：</p>
 <ol>
-<li>linux下执行：<code>tldr –update</code></li>
+<li>linux下执行：<code>tldr –-update</code></li>
 <li>windows下执行：<code>tldr update</code></li>
 </ol>
+<blockquote>
+<p>2025年03月24日 更新：</p>
+</blockquote>
+<p>在新的服务器上新安装tldr，然后执行<code>tldr --update</code>,又有新的报错：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ubuntu@VM-20-17-ubuntu:~$ tldr --update</span><br><span class="line">tldr: /home/ubuntu/.local/share/tldr: createDirectory: does not exist (No such file or directory)</span><br></pre></td></tr></table></figure>
+<p>谷歌之后，发现只需要创建一下目录即可：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mkdir -p ~/.local/share</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="https://forum.proxmox.com/threads/tldr-doesnt-work.116520/">参考</a></p>
+<hr>
 <h2 id="windows下执行tldr，显示没有此命令"><a href="#windows下执行tldr，显示没有此命令" class="headerlink" title="windows下执行tldr，显示没有此命令"></a>windows下执行tldr，显示没有此命令</h2><p>这个是因为用的<code>npm</code>进行安装的，没有把npm安装的路径加入到环境变量中，所以导致找不到<code>tldr</code>。</p>
 <ol>
 <li><code>npm config get prefix</code>: 找到自己npm所在的路径</li>
@@ -308,7 +318,7 @@
 </ol>
 <blockquote>
 <p>如果不会添加环境变量，可以自行谷歌。</p>
-<p>其实，个人建议：终极方案还是自己维护一个手册记录一下，下次要用到的时候打开手册搜索一下。这个的话省了打开手册这一步，相对快捷一点，但是如果没有找到自己想要的命令的时候，手册里面好像有影响就优先去看自己的手册，最后不行再谷歌。</p>
+<p>其实，个人建议：终极方案还是自己维护一个手册记录一下，下次要用到的时候打开手册搜索一下。<br>这个的话省了打开手册这一步，相对快捷一点，但是如果在tldr中没有找到自己想要的命令的时候，手册里面有印象就优先去看自己的手册，最后不行再谷歌。</p>
 </blockquote>
 
     </div>
@@ -359,10 +369,13 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/codewater-first-post-hexo/" rel="prev" title="codewater first post hexo">
-      <i class="fa fa-chevron-left"></i> codewater first post hexo
+    <a href="/hello-world/" rel="prev" title="Hello World">
+      <i class="fa fa-chevron-left"></i> Hello World
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/%E8%A7%A3%E5%86%B3Git%E6%8A%A5%E9%94%99fatal-bad-object-HEAD/" rel="next" title="解决Git报错fatal: bad object HEAD">
+      解决Git报错fatal: bad object HEAD <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -422,7 +435,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8tldr"><span class="nav-number">1.</span> <span class="nav-text">为什么使用tldr</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%89%E8%A3%85"><span class="nav-number">2.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BF%90%E8%A1%8C"><span class="nav-number">3.</span> <span class="nav-text">运行</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-number">4.</span> <span class="nav-text">常见问题</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#No-tldr-entry-for-ls"><span class="nav-number">4.1.</span> <span class="nav-text">No tldr entry for ls</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#windows%E4%B8%8B%E6%89%A7%E8%A1%8Ctldr%EF%BC%8C%E6%98%BE%E7%A4%BA%E6%B2%A1%E6%9C%89%E6%AD%A4%E5%91%BD%E4%BB%A4"><span class="nav-number">4.2.</span> <span class="nav-text">windows下执行tldr，显示没有此命令</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8tldr"><span class="nav-text">为什么使用tldr</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%89%E8%A3%85"><span class="nav-text">安装</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BF%90%E8%A1%8C"><span class="nav-text">运行</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-text">常见问题</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#No-tldr-entry-for-ls"><span class="nav-text">No tldr entry for ls</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#windows%E4%B8%8B%E6%89%A7%E8%A1%8Ctldr%EF%BC%8C%E6%98%BE%E7%A4%BA%E6%B2%A1%E6%9C%89%E6%AD%A4%E5%91%BD%E4%BB%A4"><span class="nav-text">windows下执行tldr，显示没有此命令</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -438,20 +451,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-count">11</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">18</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -486,7 +499,7 @@
 <div class="copyright">
   
   &copy; 2023-12 – 
-  <span itemprop="copyrightYear">2024</span>
+  <span itemprop="copyrightYear">2025</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -560,7 +573,7 @@ $(document).ready(function() {
 
   
   <script src="/lib/anime.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
   <script src="/lib/velocity/velocity.min.js"></script>
   <script src="/lib/velocity/velocity.ui.min.js"></script>
