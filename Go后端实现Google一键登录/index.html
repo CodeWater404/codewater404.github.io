@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+<meta name="google-site-verification" content="PmhPZpNZ6fYQ2biJJyWY_aOl8snCv9ynyC7UGvbgoUE" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-c.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-c.jpg">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.codewater.top","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"right","width":320,"display":"post","padding":20,"offset":20,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":-1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+
+  <meta name="description" content="用 GoFrame 实现 Google 一键登录的后端方案——ID Token 验证、自动注册用户、签发 JWT，附完整前端接入代码和踩坑指南。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go 后端实现 Google 一键登录（ID Token 验证方案）">
+<meta property="og:url" content="https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/index.html">
+<meta property="og:site_name" content="共建代码世界，践行开源精神">
+<meta property="og:description" content="用 GoFrame 实现 Google 一键登录的后端方案——ID Token 验证、自动注册用户、签发 JWT，附完整前端接入代码和踩坑指南。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-06-27T08:30:00.000Z">
+<meta property="article:modified_time" content="2026-06-27T10:16:27.021Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="Google OAuth">
+<meta property="article:tag" content="GoFrame">
+<meta property="article:tag" content="JWT">
+<meta property="article:tag" content="第三方登录">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Go 后端实现 Google 一键登录（ID Token 验证方案） | 共建代码世界，践行开源精神</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">共建代码世界，践行开源精神</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">阿水</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-resources">
+
+    <a href="/resources/" rel="section"><i class="fa fa-download fa-fw"></i>资源</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Code Water">
+      <meta itemprop="description" content="Talk is cheap , show me the code!">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="共建代码世界，践行开源精神">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Go 后端实现 Google 一键登录（ID Token 验证方案）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2025-06-27 16:30:00" itemprop="dateCreated datePublished" datetime="2025-06-27T16:30:00+08:00">2025-06-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-06-27 18:16:27" itemprop="dateModified" datetime="2026-06-27T18:16:27+08:00">2026-06-27</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/golang/" itemprop="url" rel="index"><span itemprop="name">golang</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+            <div class="post-description">用 GoFrame 实现 Google 一键登录的后端方案——ID Token 验证、自动注册用户、签发 JWT，附完整前端接入代码和踩坑指南。</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>做海外项目时，Google 一键登录几乎是标配。相比传统的邮箱注册流程（填邮箱→收验证码→设密码），用户只需要点一下 Google 按钮就能完成注册&#x2F;登录，转化率能高不少。</p>
+<p>本文以我自己的一个 Go 后端项目为例，分享 Google 一键登录的后端实现，技术栈是 <strong>GoFrame + JWT + MySQL</strong>。前端用的是 Google 官方的 Sign In With Google 按钮，后端只需要验证前端传过来的 ID Token 就行。</p>
+<span id="more"></span>
+
+<h1 id="整体流程"><a href="#整体流程" class="headerlink" title="整体流程"></a>整体流程</h1><p>Google 一键登录的核心流程其实很简单：</p>
+<pre class="mermaid" style="text-align: center;">
+            sequenceDiagram
+            participant U as 用户(浏览器)
+participant G as Google
+participant B as 后端
+
+    U->>G: 1. 点击 Google 登录按钮，弹出授权窗口
+    G->>G: 2. 用户在 Google 页面完成身份验证
+    G->>U: 3. 返回 ID Token（JWT 格式）
+    U->>B: 4. POST /user/google-login {idToken}
+    B->>G: 5. 拉取 Google JWKS 公钥（有缓存）
+    G-->>B: 6. 返回公钥
+    B->>B: 7. 用公钥本地验证 ID Token 签名和有效期
+    B->>B: 8. 根据 googleID 查找/创建用户，签发 JWT
+    B->>U: 9. 返回 JWT + 用户信息
+
+          </pre>
+
+<p>后端要做的事只有三件：</p>
+<ol>
+<li><strong>验证 ID Token</strong>——确认这个 token 确实是 Google 颁发的，且是给你的应用的</li>
+<li><strong>查找或创建用户</strong>——第一次登录自动注册，后续登录直接查</li>
+<li><strong>签发自己的 JWT</strong>——后续请求都走自己的鉴权体系</li>
+</ol>
+<h1 id="前置准备：Google-Cloud-Console-配置"><a href="#前置准备：Google-Cloud-Console-配置" class="headerlink" title="前置准备：Google Cloud Console 配置"></a>前置准备：Google Cloud Console 配置</h1><p><strong>环境依赖：</strong></p>
+<ul>
+<li>Go 1.24</li>
+<li>GoFrame v2.10.0</li>
+<li>google.golang.org&#x2F;api v0.259.0</li>
+<li>github.com&#x2F;golang-jwt&#x2F;jwt&#x2F;v5 v5.3.0</li>
+</ul>
+<p>在写代码之前，你需要去 <a target="_blank" rel="noopener" href="https://console.cloud.google.com/">Google Cloud Console</a> 创建一个 OAuth 2.0 客户端：</p>
+<ol>
+<li>进入 <strong>APIs &amp; Services → Credentials</strong></li>
+<li>点 <strong>Create Credentials → OAuth client ID</strong></li>
+<li>应用类型选 <strong>Web application</strong></li>
+<li>配置 <strong>Authorized JavaScript origins</strong>（你的前端域名，比如 <code>https://www.example.com</code>）</li>
+<li>创建后拿到 <strong>Client ID</strong> 和 <strong>Client Secret</strong></li>
+</ol>
+<p>后端验证 ID Token 只需要 <code>Client ID</code>，不需要 <code>Client Secret</code>。</p>
+<p>配置文件里加上：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">google:</span></span><br><span class="line">  <span class="attr">clientId:</span> <span class="string">&quot;你的-client-id.apps.googleusercontent.com&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="后端实现"><a href="#后端实现" class="headerlink" title="后端实现"></a>后端实现</h1><h2 id="1-定义-API-接口"><a href="#1-定义-API-接口" class="headerlink" title="1. 定义 API 接口"></a>1. 定义 API 接口</h2><p>用 GoFrame 的结构化 API 定义：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> GoogleLoginReq <span class="keyword">struct</span> &#123;</span><br><span class="line">    g.Meta  <span class="string">`path:&quot;/user/google-login&quot; method:&quot;post&quot; tags:&quot;用户&quot; summary:&quot;Google一键登录&quot;`</span></span><br><span class="line">    IDToken <span class="type">string</span> <span class="string">`json:&quot;idToken&quot; v:&quot;required&quot; dc:&quot;Google ID Token&quot;`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> GoogleLoginRes <span class="keyword">struct</span> &#123;</span><br><span class="line">    Token <span class="type">string</span>    <span class="string">`json:&quot;token&quot; dc:&quot;JWT Token&quot;`</span></span><br><span class="line">    User  *UserInfo <span class="string">`json:&quot;user&quot; dc:&quot;用户信息&quot;`</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>前端只需要传一个 <code>idToken</code> 字段，就是 Google Sign In 回调里拿到的 credential。</p>
+<h2 id="2-核心逻辑：验证-Token-查建用户"><a href="#2-核心逻辑：验证-Token-查建用户" class="headerlink" title="2. 核心逻辑：验证 Token + 查建用户"></a>2. 核心逻辑：验证 Token + 查建用户</h2><p>这是整个 Google 登录的核心代码：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> user</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">&quot;context&quot;</span></span><br><span class="line"></span><br><span class="line">    v1 <span class="string">&quot;your-project/api/user/v1&quot;</span></span><br><span class="line">    <span class="string">&quot;your-project/internal/consts&quot;</span></span><br><span class="line">    <span class="string">&quot;your-project/internal/dao&quot;</span></span><br><span class="line">    <span class="string">&quot;your-project/internal/model/do&quot;</span></span><br><span class="line">    <span class="string">&quot;your-project/internal/model/entity&quot;</span></span><br><span class="line">    <span class="string">&quot;your-project/internal/service/jwt&quot;</span></span><br><span class="line">    <span class="string">&quot;your-project/internal/utility/snowflake&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="string">&quot;github.com/gogf/gf/v2/errors/gerror&quot;</span></span><br><span class="line">    <span class="string">&quot;github.com/gogf/gf/v2/frame/g&quot;</span></span><br><span class="line">    <span class="string">&quot;google.golang.org/api/idtoken&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GoogleLogin</span><span class="params">(ctx context.Context, req *v1.GoogleLoginReq)</span></span> (*v1.GoogleLoginRes, <span class="type">error</span>) &#123;</span><br><span class="line">    <span class="comment">// 1. 验证 Google ID Token</span></span><br><span class="line">    clientID := g.Cfg().MustGet(ctx, <span class="string">&quot;google.clientId&quot;</span>).String()</span><br><span class="line">    payload, err := idtoken.Validate(ctx, req.IDToken, clientID)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        g.Log().Error(ctx, <span class="string">&quot;Google登录，Token验证失败&quot;</span>, err)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, gerror.New(<span class="string">&quot;Google登录验证失败&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 从 payload 中提取用户信息</span></span><br><span class="line">    googleID := payload.Subject</span><br><span class="line">    email := payload.Claims[<span class="string">&quot;email&quot;</span>].(<span class="type">string</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3. 查找已有用户</span></span><br><span class="line">    <span class="keyword">var</span> user *entity.Users</span><br><span class="line">    err = dao.Users.Ctx(ctx).Where(<span class="string">&quot;google_id&quot;</span>, googleID).Scan(&amp;user)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        g.Log().Error(ctx, <span class="string">&quot;Google登录，查询用户信息失败&quot;</span>, err)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, gerror.New(<span class="string">&quot;系统错误&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 4. 用户不存在则自动注册</span></span><br><span class="line">    <span class="keyword">if</span> user == <span class="literal">nil</span> &#123;</span><br><span class="line">        uid := snowflake.GenerateID()</span><br><span class="line">        _, err = dao.Users.Ctx(ctx).Insert(do.Users&#123;</span><br><span class="line">            Uid:              uid,</span><br><span class="line">            Email:            email,</span><br><span class="line">            GoogleId:         googleID,</span><br><span class="line">            RegisterType:     consts.RegisterTypeGoogle,</span><br><span class="line">            MembershipStatus: consts.MembershipStatusNonMember,</span><br><span class="line">            Status:           consts.UserStatusNormal,</span><br><span class="line">        &#125;)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            g.Log().Error(ctx, <span class="string">&quot;Google登录，创建用户失败&quot;</span>, err)</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">nil</span>, gerror.New(<span class="string">&quot;系统错误&quot;</span>)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        err = dao.Users.Ctx(ctx).Where(<span class="string">&quot;uid&quot;</span>, uid).Scan(&amp;user)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">nil</span>, gerror.New(<span class="string">&quot;系统错误&quot;</span>)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 5. 检查账号状态</span></span><br><span class="line">    <span class="keyword">if</span> user.Status != consts.UserStatusNormal &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, gerror.New(<span class="string">&quot;账号已被禁用&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 6. 签发自己的 JWT</span></span><br><span class="line">    token, err := jwt.GenerateToken(user.Uid, user.Email)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, gerror.New(<span class="string">&quot;系统错误&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> &amp;v1.GoogleLoginRes&#123;</span><br><span class="line">        Token: token,</span><br><span class="line">        User: &amp;v1.UserInfo&#123;</span><br><span class="line">            UID:   user.Uid,</span><br><span class="line">            Email: user.Email,</span><br><span class="line">            <span class="comment">// ... 其他字段</span></span><br><span class="line">        &#125;,</span><br><span class="line">    &#125;, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>逐步拆解：</p>
+<h3 id="验证-ID-Token"><a href="#验证-ID-Token" class="headerlink" title="验证 ID Token"></a>验证 ID Token</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">payload, err := idtoken.Validate(ctx, req.IDToken, clientID)</span><br></pre></td></tr></table></figure>
+
+<p><code>google.golang.org/api/idtoken</code> 包帮你做了所有脏活：</p>
+<ul>
+<li>从 Google 的 JWKS 端点拉取公钥</li>
+<li>验证 token 签名</li>
+<li>检查 <code>aud</code>（audience）是否匹配你的 Client ID</li>
+<li>检查 token 是否过期</li>
+</ul>
+<p>验证通过后，<code>payload.Subject</code> 就是用户的 Google ID（全局唯一且不变），<code>payload.Claims</code> 里有 email、name、picture 等信息。</p>
+<h3 id="查找或创建用户"><a href="#查找或创建用户" class="headerlink" title="查找或创建用户"></a>查找或创建用户</h3><p>用 <code>google_id</code> 作为关联字段查用户表。如果查不到说明是新用户，自动创建一条记录。这里用了 Snowflake 算法生成分布式唯一 ID 作为业务主键。</p>
+<p><strong>为什么用 <code>google_id</code> 而不是 <code>email</code> 来关联？</strong> 因为用户可能会改 Google 账号的邮箱，但 <code>Subject</code>（Google ID）是永远不变的。</p>
+<h3 id="签发-JWT"><a href="#签发-JWT" class="headerlink" title="签发 JWT"></a>签发 JWT</h3><p>验证完 Google 身份后，后续的鉴权还是走自己的 JWT 体系。这样做的好处是：</p>
+<ul>
+<li>不依赖 Google 的 token 有效期</li>
+<li>可以统一处理邮箱注册和 Google 注册的用户</li>
+<li>中间件只需要解析自己的 JWT，不用区分登录方式</li>
+</ul>
+<h2 id="3-JWT-签发与验证"><a href="#3-JWT-签发与验证" class="headerlink" title="3. JWT 签发与验证"></a>3. JWT 签发与验证</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GenerateToken</span><span class="params">(uid, email <span class="type">string</span>)</span></span> (<span class="type">string</span>, <span class="type">error</span>) &#123;</span><br><span class="line">    ctx := context.Background()</span><br><span class="line">    secret := g.Cfg().MustGet(ctx, <span class="string">&quot;jwt.secret&quot;</span>).String()</span><br><span class="line">    expire := g.Cfg().MustGet(ctx, <span class="string">&quot;jwt.expire&quot;</span>, <span class="number">7200</span>).Int()</span><br><span class="line"></span><br><span class="line">    claims := Claims&#123;</span><br><span class="line">        UID:   uid,</span><br><span class="line">        Email: email,</span><br><span class="line">        RegisteredClaims: jwt.RegisteredClaims&#123;</span><br><span class="line">            ID:        uuid.NewString(),</span><br><span class="line">            ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expire) * time.Second)),</span><br><span class="line">            IssuedAt:  jwt.NewNumericDate(time.Now()),</span><br><span class="line">        &#125;,</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)</span><br><span class="line">    <span class="keyword">return</span> token.SignedString([]<span class="type">byte</span>(secret))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>每个 JWT 都有一个 UUID 作为 <code>jti</code>（JWT ID），配合 Redis 黑名单可以实现主动吊销 token（比如用户退出登录时）。</p>
+<h2 id="4-路由注册"><a href="#4-路由注册" class="headerlink" title="4. 路由注册"></a>4. 路由注册</h2><p>Google 登录接口放在无需鉴权的公开路由组里：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">group.POST(<span class="string">&quot;/user/google-login&quot;</span>, user.NewV1().GoogleLogin)</span><br></pre></td></tr></table></figure>
+
+<p>跟普通的邮箱登录接口并列，登录成功后返回的数据格式完全一致——前端拿到 token 存起来，后续请求带上就行。</p>
+<h1 id="数据库设计要点"><a href="#数据库设计要点" class="headerlink" title="数据库设计要点"></a>数据库设计要点</h1><p>users 表需要加几个字段：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> users <span class="keyword">ADD</span> <span class="keyword">COLUMN</span> google_id <span class="type">VARCHAR</span>(<span class="number">128</span>) <span class="keyword">DEFAULT</span> <span class="keyword">NULL</span> COMMENT <span class="string">&#x27;Google用户ID&#x27;</span>;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> users <span class="keyword">ADD</span> <span class="keyword">COLUMN</span> register_type TINYINT UNSIGNED <span class="keyword">DEFAULT</span> <span class="number">1</span> COMMENT <span class="string">&#x27;注册类型：1-邮箱 2-Google&#x27;</span>;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> users <span class="keyword">ADD</span> <span class="keyword">UNIQUE</span> INDEX idx_google_id (google_id);</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>google_id</code> 加唯一索引，防止重复绑定</li>
+<li><code>register_type</code> 区分注册来源，后续做数据分析有用</li>
+<li><code>email</code> 字段对 Google 用户也保留，方便发通知邮件</li>
+</ul>
+<h1 id="安全注意事项"><a href="#安全注意事项" class="headerlink" title="安全注意事项"></a>安全注意事项</h1><ol>
+<li><strong>永远在后端验证 ID Token</strong>——前端传过来的 token 不可信，必须后端调 Google API 验证</li>
+<li><strong>校验 audience</strong>——<code>idtoken.Validate</code> 的第三个参数就是你的 Client ID，防止其他应用的 token 被拿来登录你的系统</li>
+<li><strong>不要把 Client Secret 暴露到前端</strong>——ID Token 验证方案不需要 Client Secret，但如果你用 Authorization Code 方案就需要，记得只放后端</li>
+<li><strong>google_id 用唯一索引</strong>——防止并发场景下创建重复用户</li>
+</ol>
+<h1 id="前端怎么接？"><a href="#前端怎么接？" class="headerlink" title="前端怎么接？"></a>前端怎么接？</h1><p>前端用的是 Google Identity Services（GIS），这是 Google 2021 年推出的新版登录 SDK，取代了老版的 <code>google-signin</code> 库。整个接入只需三步。</p>
+<h2 id="第一步：引入-GIS-脚本"><a href="#第一步：引入-GIS-脚本" class="headerlink" title="第一步：引入 GIS 脚本"></a>第一步：引入 GIS 脚本</h2><p>在 HTML 的 <code>&lt;head&gt;</code> 里加上：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://accounts.google.com/gsi/client&quot;</span> <span class="attr">async</span> <span class="attr">defer</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><code>async defer</code> 让脚本异步加载，不阻塞页面渲染。</p>
+<h2 id="第二步：放置登录按钮"><a href="#第二步：放置登录按钮" class="headerlink" title="第二步：放置登录按钮"></a>第二步：放置登录按钮</h2><p>有两种方式，按需选一种：</p>
+<h3 id="方式一：纯-HTML（最简单）"><a href="#方式一：纯-HTML（最简单）" class="headerlink" title="方式一：纯 HTML（最简单）"></a>方式一：纯 HTML（最简单）</h3><p>直接在页面放两个 div，GIS 脚本加载后会自动处理：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 配置项：Client ID 和回调函数名 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">&quot;g_id_onload&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">data-client_id</span>=<span class="string">&quot;你的-client-id.apps.googleusercontent.com&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">data-callback</span>=<span class="string">&quot;handleCredentialResponse&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 渲染 Google 样式的登录按钮 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">class</span>=<span class="string">&quot;g_id_signin&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">data-type</span>=<span class="string">&quot;standard&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">data-size</span>=<span class="string">&quot;large&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">data-theme</span>=<span class="string">&quot;outline&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">data-text</span>=<span class="string">&quot;sign_in_with&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">data-shape</span>=<span class="string">&quot;rectangular&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>data-client_id</code>：换成你在 Google Cloud Console 拿到的 Client ID</li>
+<li><code>data-callback</code>：登录成功后调用的 JavaScript 函数名</li>
+<li><code>g_id_signin</code> 的 <code>data-theme</code>、<code>data-size</code> 等属性控制按钮外观，<a target="_blank" rel="noopener" href="https://developers.google.com/identity/gsi/web/reference/html-reference">Google 官方文档</a>有完整参数列表</li>
+</ul>
+<h3 id="方式二：JavaScript-API（更灵活）"><a href="#方式二：JavaScript-API（更灵活）" class="headerlink" title="方式二：JavaScript API（更灵活）"></a>方式二：JavaScript API（更灵活）</h3><p>需要在特定时机触发登录、或者想启用 One Tap 弹窗时，用 JS 控制更方便：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">window</span>.<span class="property">onload</span> = <span class="keyword">function</span> (<span class="params"></span>) &#123;</span><br><span class="line">  google.<span class="property">accounts</span>.<span class="property">id</span>.<span class="title function_">initialize</span>(&#123;</span><br><span class="line">    <span class="attr">client_id</span>: <span class="string">&quot;你的-client-id.apps.googleusercontent.com&quot;</span>,</span><br><span class="line">    <span class="attr">callback</span>: handleCredentialResponse,</span><br><span class="line">  &#125;);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 把按钮渲染到指定容器</span></span><br><span class="line">  google.<span class="property">accounts</span>.<span class="property">id</span>.<span class="title function_">renderButton</span>(</span><br><span class="line">    <span class="variable language_">document</span>.<span class="title function_">getElementById</span>(<span class="string">&quot;googleSignInBtn&quot;</span>),</span><br><span class="line">    &#123; <span class="attr">theme</span>: <span class="string">&quot;outline&quot;</span>, <span class="attr">size</span>: <span class="string">&quot;large&quot;</span> &#125;</span><br><span class="line">  );</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 同时弹出 One Tap 提示（可选）</span></span><br><span class="line">  <span class="comment">// google.accounts.id.prompt();</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">&quot;googleSignInBtn&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="第三步：处理回调、调后端接口"><a href="#第三步：处理回调、调后端接口" class="headerlink" title="第三步：处理回调、调后端接口"></a>第三步：处理回调、调后端接口</h2><p>登录成功后，Google 会调用你配置的回调函数，参数里的 <code>credential</code> 字段就是 ID Token——一段很长的 JWT 字符串，直接传给后端就行：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">handleCredentialResponse</span>(<span class="params">response</span>) &#123;</span><br><span class="line">  <span class="comment">// response.credential 就是 Google 颁发的 ID Token</span></span><br><span class="line">  <span class="title function_">fetch</span>(<span class="string">&quot;/api/user/google-login&quot;</span>, &#123;</span><br><span class="line">    <span class="attr">method</span>: <span class="string">&quot;POST&quot;</span>,</span><br><span class="line">    <span class="attr">headers</span>: &#123; <span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;application/json&quot;</span> &#125;,</span><br><span class="line">    <span class="attr">body</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(&#123; <span class="attr">idToken</span>: response.<span class="property">credential</span> &#125;),</span><br><span class="line">  &#125;)</span><br><span class="line">    .<span class="title function_">then</span>(<span class="function">(<span class="params">res</span>) =&gt;</span> res.<span class="title function_">json</span>())</span><br><span class="line">    .<span class="title function_">then</span>(<span class="function">(<span class="params">data</span>) =&gt;</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (data.<span class="property">code</span> === <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// 登录成功，存自己系统的 JWT</span></span><br><span class="line">        <span class="variable language_">localStorage</span>.<span class="title function_">setItem</span>(<span class="string">&quot;token&quot;</span>, data.<span class="property">data</span>.<span class="property">token</span>);</span><br><span class="line">        <span class="variable language_">window</span>.<span class="property">location</span>.<span class="property">href</span> = <span class="string">&quot;/dashboard&quot;</span>;</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="variable language_">console</span>.<span class="title function_">error</span>(<span class="string">&quot;登录失败&quot;</span>, data.<span class="property">message</span>);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">    .<span class="title function_">catch</span>(<span class="function">(<span class="params">err</span>) =&gt;</span> &#123;</span><br><span class="line">      <span class="variable language_">console</span>.<span class="title function_">error</span>(<span class="string">&quot;请求出错&quot;</span>, err);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="完整示例"><a href="#完整示例" class="headerlink" title="完整示例"></a>完整示例</h2><p>把上面三步拼在一起，一个能直接跑的最简登录页面：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE <span class="keyword">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span> <span class="attr">lang</span>=<span class="string">&quot;zh&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">meta</span> <span class="attr">charset</span>=<span class="string">&quot;UTF-8&quot;</span> /&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">title</span>&gt;</span>Google 登录示例<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://accounts.google.com/gsi/client&quot;</span> <span class="attr">async</span> <span class="attr">defer</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">h1</span>&gt;</span>欢迎<span class="tag">&lt;/<span class="name">h1</span>&gt;</span></span><br><span class="line"></span><br><span class="line">  <span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">&quot;g_id_onload&quot;</span></span></span><br><span class="line"><span class="tag">       <span class="attr">data-client_id</span>=<span class="string">&quot;你的-client-id.apps.googleusercontent.com&quot;</span></span></span><br><span class="line"><span class="tag">       <span class="attr">data-callback</span>=<span class="string">&quot;handleCredentialResponse&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">div</span> <span class="attr">class</span>=<span class="string">&quot;g_id_signin&quot;</span> <span class="attr">data-type</span>=<span class="string">&quot;standard&quot;</span> <span class="attr">data-size</span>=<span class="string">&quot;large&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">    <span class="keyword">function</span> <span class="title function_">handleCredentialResponse</span>(<span class="params">response</span>) &#123;</span></span><br><span class="line"><span class="language-javascript">      <span class="title function_">fetch</span>(<span class="string">&quot;/api/user/google-login&quot;</span>, &#123;</span></span><br><span class="line"><span class="language-javascript">        <span class="attr">method</span>: <span class="string">&quot;POST&quot;</span>,</span></span><br><span class="line"><span class="language-javascript">        <span class="attr">headers</span>: &#123; <span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;application/json&quot;</span> &#125;,</span></span><br><span class="line"><span class="language-javascript">        <span class="attr">body</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(&#123; <span class="attr">idToken</span>: response.<span class="property">credential</span> &#125;),</span></span><br><span class="line"><span class="language-javascript">      &#125;)</span></span><br><span class="line"><span class="language-javascript">        .<span class="title function_">then</span>(<span class="function">(<span class="params">res</span>) =&gt;</span> res.<span class="title function_">json</span>())</span></span><br><span class="line"><span class="language-javascript">        .<span class="title function_">then</span>(<span class="function">(<span class="params">data</span>) =&gt;</span> &#123;</span></span><br><span class="line"><span class="language-javascript">          <span class="keyword">if</span> (data.<span class="property">code</span> === <span class="number">0</span>) &#123;</span></span><br><span class="line"><span class="language-javascript">            <span class="variable language_">localStorage</span>.<span class="title function_">setItem</span>(<span class="string">&quot;token&quot;</span>, data.<span class="property">data</span>.<span class="property">token</span>);</span></span><br><span class="line"><span class="language-javascript">            <span class="variable language_">window</span>.<span class="property">location</span>.<span class="property">href</span> = <span class="string">&quot;/dashboard&quot;</span>;</span></span><br><span class="line"><span class="language-javascript">          &#125;</span></span><br><span class="line"><span class="language-javascript">        &#125;);</span></span><br><span class="line"><span class="language-javascript">    &#125;</span></span><br><span class="line"><span class="language-javascript">  </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="几个容易踩的坑"><a href="#几个容易踩的坑" class="headerlink" title="几个容易踩的坑"></a>几个容易踩的坑</h2><p><strong>本地开发必须用 <code>http://localhost</code></strong></p>
+<p>在 Google Cloud Console 配置 Authorized JavaScript origins 时，本地开发要加 <code>http://localhost</code>（不是 <code>127.0.0.1</code>，也不是 <code>http://localhost:3000</code> 这样带端口的）。否则会报 <code>idpiframe_initialization_failed</code> 错误。</p>
+<p><strong>不要在 <code>file://</code> 协议下测试</strong></p>
+<p>GIS 不支持 <code>file://</code>，必须通过 HTTP&#x2F;HTTPS 服务器访问。本地可以用 <code>python3 -m http.server 8000</code> 起一个简单服务器。</p>
+<p><strong>跨域问题</strong></p>
+<p>前后端分域部署时（比如前端 <code>app.example.com</code>，后端 <code>api.example.com</code>），后端 <code>/user/google-login</code> 接口要配置 CORS，允许前端域名，否则 fetch 会被浏览器拦截。</p>
+<p><strong><code>response.credential</code> 是一次性的，不要在前端 decode</strong></p>
+<p>ID Token 有效期很短（约 1 小时），而且里面的内容只有后端拿公钥验过签之后才可信。不要在前端用 <code>atob</code> 或 jwt-decode 库解析它来做业务判断，直接传给后端就行。</p>
+<h1 id="ID-Token-方案-vs-Authorization-Code-方案"><a href="#ID-Token-方案-vs-Authorization-Code-方案" class="headerlink" title="ID Token 方案 vs Authorization Code 方案"></a>ID Token 方案 vs Authorization Code 方案</h1><p>Google 一键登录的后端实现并不复杂，核心就是 <code>idtoken.Validate</code> 这一步。整个流程：</p>
+<ol>
+<li>前端拿到 Google 的 ID Token</li>
+<li>后端用 <code>google.golang.org/api/idtoken</code> 包验证</li>
+<li>用 <code>payload.Subject</code> 关联&#x2F;创建用户</li>
+<li>签发自己的 JWT 返回</li>
+</ol>
+<p>相比 OAuth2 Authorization Code 方案，ID Token 方案更简单——不需要后端跟 Google 换 access token，一个 HTTP 请求都不用发（<code>idtoken</code> 包会缓存 Google 的公钥）。适合”只需要登录，不需要调 Google API”的场景。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Code Water
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/" title="Go 后端实现 Google 一键登录（ID Token 验证方案）">https://blog.codewater.top/Go后端实现Google一键登录/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      
+        <div>
+          <div>
+    
+        <div style="text-align:center;color: #ccc;font-size:24px;">-------------------本文结束,感谢您的阅读!-------------------</div>
+    
+</div>
+        </div>
+      
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Google-OAuth/" rel="tag"># Google OAuth</a>
+              <a href="/tags/GoFrame/" rel="tag"># GoFrame</a>
+              <a href="/tags/JWT/" rel="tag"># JWT</a>
+              <a href="/tags/%E7%AC%AC%E4%B8%89%E6%96%B9%E7%99%BB%E5%BD%95/" rel="tag"># 第三方登录</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/how-to-choose-a-desktop-configuration/" rel="prev" title="如何选择一台适的台式机配置">
+      <i class="fa fa-chevron-left"></i> 如何选择一台适的台式机配置
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B"><span class="nav-text">整体流程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E7%BD%AE%E5%87%86%E5%A4%87%EF%BC%9AGoogle-Cloud-Console-%E9%85%8D%E7%BD%AE"><span class="nav-text">前置准备：Google Cloud Console 配置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0"><span class="nav-text">后端实现</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%AE%9A%E4%B9%89-API-%E6%8E%A5%E5%8F%A3"><span class="nav-text">1. 定义 API 接口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E6%A0%B8%E5%BF%83%E9%80%BB%E8%BE%91%EF%BC%9A%E9%AA%8C%E8%AF%81-Token-%E6%9F%A5%E5%BB%BA%E7%94%A8%E6%88%B7"><span class="nav-text">2. 核心逻辑：验证 Token + 查建用户</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%AA%8C%E8%AF%81-ID-Token"><span class="nav-text">验证 ID Token</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E6%89%BE%E6%88%96%E5%88%9B%E5%BB%BA%E7%94%A8%E6%88%B7"><span class="nav-text">查找或创建用户</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AD%BE%E5%8F%91-JWT"><span class="nav-text">签发 JWT</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-JWT-%E7%AD%BE%E5%8F%91%E4%B8%8E%E9%AA%8C%E8%AF%81"><span class="nav-text">3. JWT 签发与验证</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E8%B7%AF%E7%94%B1%E6%B3%A8%E5%86%8C"><span class="nav-text">4. 路由注册</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1%E8%A6%81%E7%82%B9"><span class="nav-text">数据库设计要点</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%89%E5%85%A8%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-text">安全注意事项</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E7%AB%AF%E6%80%8E%E4%B9%88%E6%8E%A5%EF%BC%9F"><span class="nav-text">前端怎么接？</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%B8%80%E6%AD%A5%EF%BC%9A%E5%BC%95%E5%85%A5-GIS-%E8%84%9A%E6%9C%AC"><span class="nav-text">第一步：引入 GIS 脚本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%BA%8C%E6%AD%A5%EF%BC%9A%E6%94%BE%E7%BD%AE%E7%99%BB%E5%BD%95%E6%8C%89%E9%92%AE"><span class="nav-text">第二步：放置登录按钮</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%B9%E5%BC%8F%E4%B8%80%EF%BC%9A%E7%BA%AF-HTML%EF%BC%88%E6%9C%80%E7%AE%80%E5%8D%95%EF%BC%89"><span class="nav-text">方式一：纯 HTML（最简单）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%B9%E5%BC%8F%E4%BA%8C%EF%BC%9AJavaScript-API%EF%BC%88%E6%9B%B4%E7%81%B5%E6%B4%BB%EF%BC%89"><span class="nav-text">方式二：JavaScript API（更灵活）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%B8%89%E6%AD%A5%EF%BC%9A%E5%A4%84%E7%90%86%E5%9B%9E%E8%B0%83%E3%80%81%E8%B0%83%E5%90%8E%E7%AB%AF%E6%8E%A5%E5%8F%A3"><span class="nav-text">第三步：处理回调、调后端接口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%8C%E6%95%B4%E7%A4%BA%E4%BE%8B"><span class="nav-text">完整示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%87%A0%E4%B8%AA%E5%AE%B9%E6%98%93%E8%B8%A9%E7%9A%84%E5%9D%91"><span class="nav-text">几个容易踩的坑</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ID-Token-%E6%96%B9%E6%A1%88-vs-Authorization-Code-%E6%96%B9%E6%A1%88"><span class="nav-text">ID Token 方案 vs Authorization Code 方案</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Code Water"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Code Water</p>
+  <div class="site-description" itemprop="description">Talk is cheap , show me the code!</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/CodeWater404" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;CodeWater404" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:dylanrieder@163.com" title="E-Mail → mailto:dylanrieder@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2023-12 – 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Code Water</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+
+    <script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <span id="busuanzi_container_site_pv">总访问量<span id="busuanzi_value_site_pv"></span>次</span>
+    <span class="post-meta-divider">|</span>
+    <span id="busuanzi_container_site_uv">总访客数<span id="busuanzi_value_site_uv"></span>人</span>
+    <span class="post-meta-divider">|</span>
+<!-- 不算子计数初始值纠正 -->
+<script>
+$(document).ready(function() {
+
+    var int = setInterval(fixCount, 50);  // 50ms周期检测函数
+    var countOffset = 20000;  // 初始化首次数据
+
+    function fixCount() {            
+       if (document.getElementById("busuanzi_container_site_pv").style.display != "none")
+        {
+            $("#busuanzi_value_site_pv").html(parseInt($("#busuanzi_value_site_pv").html()) + countOffset); 
+            clearInterval(int);
+        }                  
+        if ($("#busuanzi_container_site_pv").css("display") != "none")
+        {
+            $("#busuanzi_value_site_uv").html(parseInt($("#busuanzi_value_site_uv").html()) + countOffset); // 加上初始数据 
+            clearInterval(int); // 停止检测
+        }  
+    }
+       	
+});
+</script> 
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+<script>
+if (document.querySelectorAll('pre.mermaid').length) {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js', () => {
+    mermaid.initialize({
+      theme    : 'forest',
+      logLevel : 3,
+      flowchart: { curve     : 'linear' },
+      gantt    : { axisFormat: '%m/%d/%Y' },
+      sequence : { actorMargin: 50 }
+    });
+  }, window.mermaid);
+}
+</script>
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '51d80812d0893d881403',
+      clientSecret: '90b5b7396136066a177432adae54af452cf7f876',
+      repo        : 'codewater404.github.io',
+      owner       : 'CodeWater404',
+      admin       : ['CodeWater404'],
+      id          : '924d5602bfe7350600383adb251a2caf',
+        language: '',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>
