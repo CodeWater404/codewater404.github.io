@@ -4,6 +4,37 @@
   
     
     <entry>
+      <title>Mac 终端 CLI 工具推荐：那些让命令行效率翻倍的家伙</title>
+      <link href="/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90/"/>
+      <url>/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90/</url>
+      
+        <content type="html"><![CDATA[<p>macOS 自带的终端工具集（<code>grep</code>、<code>find</code>、<code>ls</code>、<code>cat</code>……）能用，但有些地方用起来总觉得别扭——搜索慢、输出不直观、没有高亮、参数难记。过去几年，社区里涌现出一批用 Rust、Go 写的现代 CLI 工具，直接解决了这些痛点。</p><span id="more"></span><hr><h2 id="终端模拟器：kitty"><a href="#终端模拟器：kitty" class="headerlink" title="终端模拟器：kitty"></a>终端模拟器：kitty</h2><p>所有工具的运行基础。kitty 是一个用 GPU 渲染的高性能终端模拟器，启动快、滚动流畅，原生支持图片内联显示（这也是 yazi 文件预览图片能用的前提）。内置分屏（不依赖 tmux），支持标签页，配置文件是单个 <code>kitty.conf</code>，改起来比大多数终端直观。对于在终端里花大量时间的人，换一个渲染性能好的终端模拟器是性价比很高的基础投资。</p><hr><h2 id="Shell-框架：Zim"><a href="#Shell-框架：Zim" class="headerlink" title="Shell 框架：Zim"></a>Shell 框架：Zim</h2><p>macOS 自带 zsh，但裸 zsh 体验很差。Zim 是一个轻量的 zsh 插件管理框架，比 Oh My Zsh 启动速度快很多，通过 <code>.zimrc</code> 声明需要的插件，装好后自动生效。</p><p>当前配置里启用的插件：</p><ul><li><strong>fast-syntax-highlighting</strong>：实时高亮正在输入的命令，命令合法显绿色，输错显红色，按回车前就能发现拼写错误</li><li><strong>zsh-autosuggestions</strong>：根据历史记录实时预测补全建议，显示为灰色文字，按 <code>→</code> 接受，减少大量重复输入</li><li><strong>zsh-history-substring-search</strong>：按 <code>↑↓</code> 方向键时，按当前已输入内容做前缀匹配过滤历史，而不是顺序翻</li><li><strong>fzf-tab</strong>：把 Tab 补全的候选列表接管给 fzf，变成可交互过滤的模糊搜索界面</li><li><strong>steeef</strong>：Prompt 主题，展示用户名、当前路径、Git 分支和状态</li></ul><hr><h2 id="Shell-增强工具"><a href="#Shell-增强工具" class="headerlink" title="Shell 增强工具"></a>Shell 增强工具</h2><h3 id="fzf"><a href="#fzf" class="headerlink" title="fzf"></a>fzf</h3><p>模糊搜索框架，单独使用时是一个交互式过滤器，真正的价值在于<strong>和其他命令组合</strong>。集成进 Zsh 后会接管三个快捷键：<code>Ctrl+T</code> 模糊搜索文件、<code>Alt+C</code> 模糊跳转目录、<code>Ctrl+R</code> 交互式搜索命令历史。配合上面的 fzf-tab，Tab 补全也变成模糊搜索界面。fzf 是整个工具链里”乘数效应”最强的一个——它本身不做什么，但让其他工具都变得更好用。</p><h3 id="atuin"><a href="#atuin" class="headerlink" title="atuin"></a>atuin</h3><p>shell 历史记录的替代方案，把命令历史存进本地 SQLite 数据库，支持按时间、工作目录、退出码等维度检索。最直接的改变是 <code>Ctrl+R</code> 变成了带预览的全文搜索界面。还支持多设备历史同步，在不同 Mac 之间共享命令历史。</p><h3 id="zoxide"><a href="#zoxide" class="headerlink" title="zoxide"></a>zoxide</h3><p><code>cd</code> 的智能替代品。记住访问过的目录，之后输入 <code>z blog</code> 就能直接跳到 <code>/Users/you/code/github/blog-source</code>，不需要输完整路径。项目目录多、路径深的开发者体验提升非常明显，是少数几个”装了就再也不想卸”的工具之一。</p><hr><h2 id="终端个性化"><a href="#终端个性化" class="headerlink" title="终端个性化"></a>终端个性化</h2><h3 id="fastfetch-pokemon-colorscripts"><a href="#fastfetch-pokemon-colorscripts" class="headerlink" title="fastfetch + pokemon-colorscripts"></a>fastfetch + pokemon-colorscripts</h3><p>这两个组合使用：每次打开新终端，先随机展示一只宝可梦的彩色 ASCII 图，fastfetch 把系统信息（OS、CPU、内存、Shell、终端等）渲染在旁边。纯个性化，无实际功能，但比默认的空终端有意思很多。fastfetch 用 C 写成，启动速度远快于老牌的 neofetch，不会拖慢终端启动。</p><hr><h2 id="文件与搜索"><a href="#文件与搜索" class="headerlink" title="文件与搜索"></a>文件与搜索</h2><h3 id="ripgrep（rg）"><a href="#ripgrep（rg）" class="headerlink" title="ripgrep（rg）"></a>ripgrep（rg）</h3><p>比 <code>grep</code> 快一个数量级的全文搜索工具，默认递归搜索当前目录，自动忽略 <code>.gitignore</code> 里的文件。在大型代码仓库里搜索关键词，<code>rg</code> 的速度优势非常明显，输出带文件名、行号和彩色高亮。VSCode 的全局搜索底层用的也是 ripgrep。</p><h3 id="fd"><a href="#fd" class="headerlink" title="fd"></a>fd</h3><p><code>find</code> 的现代替代品。默认大小写不敏感、忽略 <code>.gitignore</code> 内容、输出带颜色，语法比 <code>find</code> 直观很多——找 Go 文件直接 <code>fd -e go</code>，而不是 <code>find . -name &quot;*.go&quot; -type f</code>。和 fzf 结合使用效果更好。</p><h3 id="bat"><a href="#bat" class="headerlink" title="bat"></a>bat</h3><p><code>cat</code> 的替代品，带语法高亮、行号，还有 Git 集成（在行号旁标注哪些行被修改过）。它也被很多其他工具用作底层渲染器——fzf 的文件预览、yazi 的代码预览默认都会调用 bat。</p><h3 id="eza"><a href="#eza" class="headerlink" title="eza"></a>eza</h3><p><code>ls</code> 的现代替代品。默认输出带颜色，<code>-l</code> 模式下可以显示 Git 状态，<code>--tree</code> 模式展示目录树——这个功能直接取代了单独装 <code>tree</code> 命令的需求。配合 Nerd Font 字体还能显示文件类型图标，比原生 <code>ls -la</code> 的信息密度高很多。</p><h3 id="yazi"><a href="#yazi" class="headerlink" title="yazi"></a>yazi</h3><p>终端里的文件管理器，基于 Rust 构建，速度很快。方向键导航目录、实时预览文件内容（代码、图片、PDF），批量操作文件。在 kitty 终端下能直接内联显示图片预览。对于不想离开终端但又需要浏览文件的场景，yazi 比反复 <code>cd</code> + <code>ls</code> 高效很多。<code>.zshrc</code> 里定义了 <code>y</code> 函数，退出 yazi 时会自动 <code>cd</code> 到最后所在目录。</p><h3 id="jq"><a href="#jq" class="headerlink" title="jq"></a>jq</h3><p>JSON 的命令行处理器，核心能力是<strong>对 JSON 进行查询、过滤、转换</strong>。调接口拿到 JSON 响应后，<code>curl ... | jq &#39;.data.items[] | .name&#39;</code> 这样的管道就能直接提取想要的字段。处理 API 响应、配置文件、日志分析时几乎不可缺少。</p><hr><h2 id="Git-工具"><a href="#Git-工具" class="headerlink" title="Git 工具"></a>Git 工具</h2><h3 id="git-delta"><a href="#git-delta" class="headerlink" title="git-delta"></a>git-delta</h3><p>Git diff 的语法高亮渲染器。配置进 <code>~/.gitconfig</code> 后，<code>git diff</code>、<code>git log -p</code>、<code>git show</code> 的输出变成带语法高亮、行内差异标注的格式，比默认的加减号 diff 可读性高出不少。</p><h3 id="lazygit"><a href="#lazygit" class="headerlink" title="lazygit"></a>lazygit</h3><p>终端里的 Git TUI，用键盘操作就能完成暂存、提交、分支管理、rebase、stash 等常用 Git 操作，不用记忆大量命令参数。<code>.zshrc</code> 里设置了 <code>alias lg=lazygit</code>，快速调出。关于 lazygit 的常用工作流，后续会单独介绍。</p><h3 id="gh"><a href="#gh" class="headerlink" title="gh"></a>gh</h3><p>GitHub 官方 CLI。核心价值在于<strong>不离开终端就能操作 GitHub</strong>——创建 PR、查看 Issue、管理 Actions 工作流、查看 Review 评论。过去这些操作要切到浏览器，现在在命令行里完成，减少了大量上下文切换，在 CI&#x2F;CD 调试、PR Review 来回改代码这类场景下体感尤其明显。</p><hr><h2 id="Markdown-渲染：glow-mdcat"><a href="#Markdown-渲染：glow-mdcat" class="headerlink" title="Markdown 渲染：glow &#x2F; mdcat"></a>Markdown 渲染：glow &#x2F; mdcat</h2><h3 id="glow"><a href="#glow" class="headerlink" title="glow"></a>glow</h3><p>终端里的 Markdown 渲染器。<code>glow README.md</code> 直接把 Markdown 渲染成格式化输出——标题、加粗、代码块都有对应的视觉呈现。看项目文档、博客草稿时比 <code>cat</code> 体验好很多。</p><h3 id="mdcat"><a href="#mdcat" class="headerlink" title="mdcat"></a>mdcat</h3><p>同样是 Markdown 渲染工具，更轻量，在 kitty 终端下支持内联显示图片。文档里有图的场景，mdcat 的图文混排体验比 glow 更完整。</p><hr><h2 id="编辑器：Neovim-LazyVim"><a href="#编辑器：Neovim-LazyVim" class="headerlink" title="编辑器：Neovim + LazyVim"></a>编辑器：Neovim + LazyVim</h2><p>Neovim 是 Vim 的现代分支，支持 Lua 配置、LSP、Tree-sitter 语法高亮。但从零配置 Neovim 到可用状态需要花大量时间。</p><p><strong>LazyVim</strong> 解决了这个问题——它是一套预配置的 Neovim 发行版，开箱即得代码补全、LSP、文件树、模糊搜索、Git 集成等功能。底层插件管理器是 <strong>lazy.nvim</strong>，按需懒加载插件，启动速度快。</p><p>配套工具 <strong>im-select</strong> 负责输入法自动切换：从 Neovim 的 Insert 模式退出时，自动把输入法切换回英文，避免进入 Normal 模式后还在中文状态下输入命令的问题。</p><p>LazyVim 的上手曲线比从零配置 Neovim 低很多，但整体还是需要适应 Vim 的模式操作。关于 LazyVim 的配置和常用插件，后续会单独介绍。</p><hr><h2 id="从哪里开始"><a href="#从哪里开始" class="headerlink" title="从哪里开始"></a>从哪里开始</h2><p>按学习成本从低到高：</p><ul><li><strong>零成本，立竿见影</strong>：ripgrep、bat、eza、git-delta、zoxide、atuin——装上改个别名就能用</li><li><strong>需要适应键位</strong>：fzf、lazygit、yazi——花半小时熟悉一下，之后回报持续</li><li><strong>需要系统投入</strong>：LazyVim——上手慢，但配置完善后是全功能命令行 IDE</li></ul><p>后续会针对 fzf、lazygit、LazyVim 单独写深入使用的文章。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> tools </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Mac </tag>
+            
+            <tag> CLI </tag>
+            
+            <tag> Terminal </tag>
+            
+            <tag> 效率工具 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Go 后端实现 Google 一键登录（ID Token 验证方案）</title>
       <link href="/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/"/>
       <url>/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/</url>
