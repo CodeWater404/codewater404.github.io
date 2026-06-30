@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+<meta name="google-site-verification" content="PmhPZpNZ6fYQ2biJJyWY_aOl8snCv9ynyC7UGvbgoUE" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-c.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-c.jpg">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.codewater.top","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"right","width":320,"display":"post","padding":20,"offset":20,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":-1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+
+  <meta name="description" content="git tag 完整教程：附注标签 vs 轻量标签的区别、打标签推送远端、detached HEAD 的坑、版本发布完整流程，一篇备查够用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="git tag 常用命令与使用场景">
+<meta property="og:url" content="https://blog.codewater.top/git-tag%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%E4%B8%8E%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF/index.html">
+<meta property="og:site_name" content="共建代码世界，践行开源精神">
+<meta property="og:description" content="git tag 完整教程：附注标签 vs 轻量标签的区别、打标签推送远端、detached HEAD 的坑、版本发布完整流程，一篇备查够用。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-30T02:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-30T16:33:28.417Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="CLI">
+<meta property="article:tag" content="git">
+<meta property="article:tag" content="版本管理">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.codewater.top/git-tag%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%E4%B8%8E%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>git tag 常用命令与使用场景 | 共建代码世界，践行开源精神</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">共建代码世界，践行开源精神</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">阿水</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-resources">
+
+    <a href="/resources/" rel="section"><i class="fa fa-download fa-fw"></i>资源</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.codewater.top/git-tag%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%E4%B8%8E%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Code Water">
+      <meta itemprop="description" content="Talk is cheap , show me the code!">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="共建代码世界，践行开源精神">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          git tag 常用命令与使用场景
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-06-30 10:00:00" itemprop="dateCreated datePublished" datetime="2026-06-30T10:00:00+08:00">2026-06-30</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-07-01 00:33:28" itemprop="dateModified" datetime="2026-07-01T00:33:28+08:00">2026-07-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/tools/" itemprop="url" rel="index"><span itemprop="name">tools</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+            <div class="post-description">git tag 完整教程：附注标签 vs 轻量标签的区别、打标签推送远端、detached HEAD 的坑、版本发布完整流程，一篇备查够用。</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>tag 是给某个 commit 贴一个永久名字。最常见的用途是版本发布，打完一个版本就在这个 commit 上打个 <code>v1.2.0</code>，之后随时能找回来，也能在 GitHub 上直接生成 Release。</p>
+<span id="more"></span>
+
+<hr>
+<h2 id="两种-tag：轻量标签-vs-附注标签"><a href="#两种-tag：轻量标签-vs-附注标签" class="headerlink" title="两种 tag：轻量标签 vs 附注标签"></a>两种 tag：轻量标签 vs 附注标签</h2><p>Git 有两种 tag，行为不同：</p>
+<p><strong>轻量标签（lightweight）</strong>：只是一个 commit 的别名指针，本质上和分支名差不多，但不会移动。不存储额外信息。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git tag v1.0.0</span><br></pre></td></tr></table></figure>
+
+<p><strong>附注标签（annotated）</strong>：独立的 Git 对象，包含打标签者的名字、邮件、时间、tag message，还能用 GPG 签名。<code>git show</code> 能看到这些元信息。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git tag -a v1.0.0 -m <span class="string">&quot;Release v1.0.0&quot;</span></span><br><span class="line"><span class="comment">#      -a：annotated，创建附注标签（区别于默认的轻量标签）</span></span><br><span class="line"><span class="comment">#      -m：message，标签的说明文字，不加 -m 会弹出编辑器让你填写</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>什么时候用哪个</strong>：</p>
+<ul>
+<li>正式版本发布 → 用附注标签（<code>-a</code>），信息完整，<code>git describe</code> 默认只识别附注标签</li>
+<li>临时标记某个 commit（自用）→ 轻量标签够用</li>
+</ul>
+<hr>
+<h2 id="打标签"><a href="#打标签" class="headerlink" title="打标签"></a>打标签</h2><h3 id="给当前-commit-打标签"><a href="#给当前-commit-打标签" class="headerlink" title="给当前 commit 打标签"></a>给当前 commit 打标签</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 轻量标签</span></span><br><span class="line">git tag v1.0.0</span><br><span class="line"></span><br><span class="line"><span class="comment"># 附注标签（推荐用于版本发布）</span></span><br><span class="line">git tag -a v1.0.0 -m <span class="string">&quot;Release v1.0.0&quot;</span></span><br><span class="line"><span class="comment">#      -a：annotated，创建附注标签</span></span><br><span class="line"><span class="comment">#      -m：message，填标签说明，省略此参数会弹出 $EDITOR 让你手动输入</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="给历史-commit-补打标签"><a href="#给历史-commit-补打标签" class="headerlink" title="给历史 commit 补打标签"></a>给历史 commit 补打标签</h3><p>先找到目标 commit 的 hash：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">log</span> --oneline</span><br><span class="line"><span class="comment">#       --oneline：每个 commit 只显示一行（短 hash + 提交信息），方便找 hash</span></span><br><span class="line"><span class="comment"># a3f2c1d feat: add payment module</span></span><br><span class="line"><span class="comment"># 8b9e012 fix: resolve login timeout</span></span><br></pre></td></tr></table></figure>
+
+<p>然后指定 hash 打标签：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">git tag -a v0.9.0 8b9e012 -m <span class="string">&quot;Release v0.9.0&quot;</span></span><br><span class="line"><span class="comment">#      -a：附注标签</span></span><br><span class="line"><span class="comment">#         v0.9.0：标签名</span></span><br><span class="line"><span class="comment">#                8b9e012：目标 commit 的 hash（不指定则默认当前 commit）</span></span><br><span class="line"><span class="comment">#                         -m：标签说明</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="查看标签"><a href="#查看标签" class="headerlink" title="查看标签"></a>查看标签</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 列出所有标签（按字母序）</span></span><br><span class="line">git tag</span><br><span class="line"></span><br><span class="line"><span class="comment"># 通配符过滤，只看 v1.x.x 系列</span></span><br><span class="line">git tag -l <span class="string">&quot;v1.*&quot;</span></span><br><span class="line"><span class="comment">#      -l：list，配合通配符（glob）过滤标签名，* 匹配任意字符</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看标签详情（附注标签会显示 tagger、日期、message；轻量标签只显示 commit 信息）</span></span><br><span class="line">git show v1.0.0</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看标签指向哪个 commit（输出完整 hash）</span></span><br><span class="line">git rev-parse v1.0.0</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="推送到远端"><a href="#推送到远端" class="headerlink" title="推送到远端"></a>推送到远端</h2><p>本地打的标签不会自动同步到远端，需要显式推送。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 推送单个标签（和推送分支语法一样）</span></span><br><span class="line">git push origin v1.0.0</span><br><span class="line"></span><br><span class="line"><span class="comment"># 推送所有本地标签，包括轻量标签</span></span><br><span class="line">git push origin --tags</span><br><span class="line"><span class="comment">#               --tags：把本地所有 tag 一次性推送到远端</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 只推送附注标签，不推轻量标签（更安全）</span></span><br><span class="line">git push origin --follow-tags</span><br><span class="line"><span class="comment">#               --follow-tags：只推送有对应 commit 的附注标签，轻量标签不推</span></span><br></pre></td></tr></table></figure>
+
+<p>日常版本发布推荐用 <code>--follow-tags</code>，只把正式的附注标签推上去。</p>
+<hr>
+<h2 id="删除标签"><a href="#删除标签" class="headerlink" title="删除标签"></a>删除标签</h2><h3 id="删除本地标签"><a href="#删除本地标签" class="headerlink" title="删除本地标签"></a>删除本地标签</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git tag -d v1.0.0</span><br><span class="line"><span class="comment">#      -d：delete，删除本地标签（不影响远端）</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="删除远端标签"><a href="#删除远端标签" class="headerlink" title="删除远端标签"></a>删除远端标签</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 写法一（Git 1.7.0+）</span></span><br><span class="line">git push origin --delete v1.0.0</span><br><span class="line"><span class="comment">#               --delete：删除远端的指定引用（分支或标签都适用）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 写法二（推送一个空引用覆盖，效果等同于删除）</span></span><br><span class="line">git push origin :refs/tags/v1.0.0</span><br><span class="line"><span class="comment">#              :&lt;ref&gt;：冒号前为空表示&quot;推送空内容&quot;，即删除远端的这个引用</span></span><br></pre></td></tr></table></figure>
+
+<p>两种写法效果一样，推荐第一种，语义更清晰。</p>
+<hr>
+<h2 id="检出标签：detached-HEAD-的坑"><a href="#检出标签：detached-HEAD-的坑" class="headerlink" title="检出标签：detached HEAD 的坑"></a>检出标签：detached HEAD 的坑</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git checkout v1.0.0</span><br></pre></td></tr></table></figure>
+
+<p>执行后会进入 <strong>detached HEAD</strong> 状态，HEAD 直接指向一个 commit 而不是分支。这时候如果做了新的提交，切走以后提交会丢失（没有分支引用它）。</p>
+<p>如果只是查看历史代码，detached HEAD 没问题。但如果要在某个版本基础上修复 bug，正确做法是从标签创建一个分支：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git checkout -b hotfix/v1.0.1 v1.0.0</span><br><span class="line"><span class="comment">#            -b：新建并立即切换到这个分支（branch）</span></span><br><span class="line"><span class="comment">#               hotfix/v1.0.1：新分支名</span></span><br><span class="line"><span class="comment">#                              v1.0.0：起点，基于这个标签指向的 commit 创建分支</span></span><br></pre></td></tr></table></figure>
+
+<p>这样在 <code>v1.0.0</code> 的代码基础上，工作在 <code>hotfix/v1.0.1</code> 分支，提交不会丢。</p>
+<hr>
+<h2 id="常用命令速查"><a href="#常用命令速查" class="headerlink" title="常用命令速查"></a>常用命令速查</h2><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>git tag &lt;name&gt;</code></td>
+<td>创建轻量标签（当前 commit）</td>
+</tr>
+<tr>
+<td><code>git tag -a &lt;name&gt; -m &quot;&lt;msg&gt;&quot;</code></td>
+<td>创建附注标签</td>
+</tr>
+<tr>
+<td><code>git tag -a &lt;name&gt; &lt;hash&gt; -m &quot;&lt;msg&gt;&quot;</code></td>
+<td>给历史 commit 打附注标签</td>
+</tr>
+<tr>
+<td><code>git tag</code></td>
+<td>列出所有本地标签</td>
+</tr>
+<tr>
+<td><code>git tag -l &quot;&lt;pattern&gt;&quot;</code></td>
+<td>通配符过滤标签列表</td>
+</tr>
+<tr>
+<td><code>git show &lt;name&gt;</code></td>
+<td>查看标签详情</td>
+</tr>
+<tr>
+<td><code>git rev-parse &lt;name&gt;</code></td>
+<td>查看标签指向的 commit hash</td>
+</tr>
+<tr>
+<td><code>git push origin &lt;name&gt;</code></td>
+<td>推送单个标签</td>
+</tr>
+<tr>
+<td><code>git push origin --follow-tags</code></td>
+<td>推送所有附注标签</td>
+</tr>
+<tr>
+<td><code>git push origin --tags</code></td>
+<td>推送所有标签（含轻量标签）</td>
+</tr>
+<tr>
+<td><code>git tag -d &lt;name&gt;</code></td>
+<td>删除本地标签</td>
+</tr>
+<tr>
+<td><code>git push origin --delete &lt;name&gt;</code></td>
+<td>删除远端标签</td>
+</tr>
+<tr>
+<td><code>git checkout -b &lt;branch&gt; &lt;name&gt;</code></td>
+<td>从标签创建新分支</td>
+</tr>
+<tr>
+<td><code>git describe --tags</code></td>
+<td>显示距最近 tag 的距离</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="版本发布的完整流程"><a href="#版本发布的完整流程" class="headerlink" title="版本发布的完整流程"></a>版本发布的完整流程</h2><p>以 <code>v1.2.0</code> 为例，典型流程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 确保代码在主分支，工作区干净</span></span><br><span class="line">git checkout main</span><br><span class="line">git status</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 打附注标签</span></span><br><span class="line">git tag -a v1.2.0 -m <span class="string">&quot;Release v1.2.0</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">主要变更：</span></span><br><span class="line"><span class="string">- 新增 OAuth 登录支持</span></span><br><span class="line"><span class="string">- 修复文件上传超时问题&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 推送代码和标签</span></span><br><span class="line">git push origin main</span><br><span class="line">git push origin v1.2.0</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或者用 --follow-tags 合并成一步</span></span><br><span class="line">git push origin main --follow-tags</span><br></pre></td></tr></table></figure>
+
+<p>推送后，GitHub 会在 Releases 页面列出这个标签，可以在页面上补充 Release Notes，也可以附加编译好的二进制文件。</p>
+<h3 id="语义版本命名（semver）"><a href="#语义版本命名（semver）" class="headerlink" title="语义版本命名（semver）"></a>语义版本命名（semver）</h3><p>tag 名字没有强制要求，但遵循 <a target="_blank" rel="noopener" href="https://semver.org/">semver</a> 是行业惯例：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">v</span>&lt;主版本&gt;.&lt;次版本&gt;.&lt;补丁版本&gt;</span><br><span class="line"><span class="attribute">v1</span>.<span class="number">2</span>.<span class="number">0</span>   # 正式版本</span><br><span class="line"><span class="attribute">v1</span>.<span class="number">2</span>.<span class="number">0</span>-beta.<span class="number">1</span>  # 预发布版本</span><br><span class="line"><span class="attribute">v1</span>.<span class="number">2</span>.<span class="number">0</span>-rc.<span class="number">1</span>    # Release Candidate</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>主版本</strong>：不兼容的 API 变更</li>
+<li><strong>次版本</strong>：向下兼容的新功能</li>
+<li><strong>补丁版本</strong>：向下兼容的 bug 修复</li>
+</ul>
+<hr>
+<h2 id="git-describe：距上一个-tag-有多远"><a href="#git-describe：距上一个-tag-有多远" class="headerlink" title="git describe：距上一个 tag 有多远"></a><code>git describe</code>：距上一个 tag 有多远</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git describe --tags</span><br><span class="line"><span class="comment">#            --tags：同时识别轻量标签，默认只识别附注标签</span></span><br><span class="line"><span class="comment"># v1.2.0-3-ga3f2c1d</span></span><br></pre></td></tr></table></figure>
+
+<p>输出格式：<code>&lt;最近tag&gt;-&lt;距离commit数&gt;-g&lt;当前commit hash&gt;</code>。在 CI 脚本里用来自动生成构建版本号很方便。如果当前 commit 刚好就是 tag，直接输出 <code>v1.2.0</code>。</p>
+<hr>
+<h2 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h2><p><strong>git tag 和分支有什么区别？</strong></p>
+<p>分支是移动的指针，随着新 commit 向前推进。tag 是固定的指针，一旦打上就不会移动，始终指向那个 commit。它们都是对 commit 的引用，但语义不同：分支表示”正在进行的工作线”，tag 表示”这个时刻的快照”。</p>
+<p><strong>为什么 <code>git push</code> 不会自动推送标签？</strong></p>
+<p>Git 把标签视为本地元数据，和分支一样不自动同步，需要显式推送。设计上是为了让临时的本地标签不污染远端。推送单个用 <code>git push origin v1.0.0</code>，推送全部附注标签用 <code>git push origin --follow-tags</code>。</p>
+<p><strong>如何修改已经推送的标签？</strong></p>
+<p>标签不能直接编辑。标准做法是删除旧标签再重新打：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 本地删除并重新打</span></span><br><span class="line">git tag -d v1.0.0                        <span class="comment"># -d：删除本地标签</span></span><br><span class="line">git tag -a v1.0.0 -m <span class="string">&quot;新的 message&quot;</span>     <span class="comment"># 重新打附注标签</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 同步到远端</span></span><br><span class="line">git push origin --delete v1.0.0          <span class="comment"># 删除远端旧标签</span></span><br><span class="line">git push origin v1.0.0                   <span class="comment"># 推送新标签</span></span><br></pre></td></tr></table></figure>
+
+<p>对于已经公开发布的版本号，强烈不建议这样操作，因为其他人可能已经基于这个 tag 做了构建或发布。</p>
+<p><strong>轻量标签和附注标签哪个适合版本发布？</strong></p>
+<p>附注标签（<code>git tag -a</code>）。它存储了完整的元数据（打标签者、时间、message），可以用 GPG 签名验证，<code>git describe</code> 默认只识别附注标签，<code>git show</code> 也能看到详细信息。轻量标签只适合本地临时标记，不适合正式版本。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Code Water
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.codewater.top/git-tag%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%E4%B8%8E%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF/" title="git tag 常用命令与使用场景">https://blog.codewater.top/git-tag常用命令与使用场景/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      
+        <div>
+          <div>
+    
+        <div style="text-align:center;color: #ccc;font-size:24px;">-------------------本文结束,感谢您的阅读!-------------------</div>
+    
+</div>
+        </div>
+      
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/CLI/" rel="tag"># CLI</a>
+              <a href="/tags/git/" rel="tag"># git</a>
+              <a href="/tags/%E7%89%88%E6%9C%AC%E7%AE%A1%E7%90%86/" rel="tag"># 版本管理</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90/" rel="prev" title="Mac 终端 CLI 工具推荐：那些让命令行效率翻倍的家伙">
+      <i class="fa fa-chevron-left"></i> Mac 终端 CLI 工具推荐：那些让命令行效率翻倍的家伙
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim/" rel="next" title="Mac 终端基础配置：kitty + Zim">
+      Mac 终端基础配置：kitty + Zim <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%A4%E7%A7%8D-tag%EF%BC%9A%E8%BD%BB%E9%87%8F%E6%A0%87%E7%AD%BE-vs-%E9%99%84%E6%B3%A8%E6%A0%87%E7%AD%BE"><span class="nav-text">两种 tag：轻量标签 vs 附注标签</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%93%E6%A0%87%E7%AD%BE"><span class="nav-text">打标签</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%99%E5%BD%93%E5%89%8D-commit-%E6%89%93%E6%A0%87%E7%AD%BE"><span class="nav-text">给当前 commit 打标签</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%99%E5%8E%86%E5%8F%B2-commit-%E8%A1%A5%E6%89%93%E6%A0%87%E7%AD%BE"><span class="nav-text">给历史 commit 补打标签</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%A0%87%E7%AD%BE"><span class="nav-text">查看标签</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A8%E9%80%81%E5%88%B0%E8%BF%9C%E7%AB%AF"><span class="nav-text">推送到远端</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E6%A0%87%E7%AD%BE"><span class="nav-text">删除标签</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E6%9C%AC%E5%9C%B0%E6%A0%87%E7%AD%BE"><span class="nav-text">删除本地标签</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E8%BF%9C%E7%AB%AF%E6%A0%87%E7%AD%BE"><span class="nav-text">删除远端标签</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E5%87%BA%E6%A0%87%E7%AD%BE%EF%BC%9Adetached-HEAD-%E7%9A%84%E5%9D%91"><span class="nav-text">检出标签：detached HEAD 的坑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%E9%80%9F%E6%9F%A5"><span class="nav-text">常用命令速查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%89%88%E6%9C%AC%E5%8F%91%E5%B8%83%E7%9A%84%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B"><span class="nav-text">版本发布的完整流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%AD%E4%B9%89%E7%89%88%E6%9C%AC%E5%91%BD%E5%90%8D%EF%BC%88semver%EF%BC%89"><span class="nav-text">语义版本命名（semver）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#git-describe%EF%BC%9A%E8%B7%9D%E4%B8%8A%E4%B8%80%E4%B8%AA-tag-%E6%9C%89%E5%A4%9A%E8%BF%9C"><span class="nav-text">git describe：距上一个 tag 有多远</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-text">常见问题</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Code Water"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Code Water</p>
+  <div class="site-description" itemprop="description">Talk is cheap , show me the code!</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">34</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/CodeWater404" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;CodeWater404" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:dylanrieder@163.com" title="E-Mail → mailto:dylanrieder@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2023-12 – 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Code Water</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+
+    <script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <span id="busuanzi_container_site_pv">总访问量<span id="busuanzi_value_site_pv"></span>次</span>
+    <span class="post-meta-divider">|</span>
+    <span id="busuanzi_container_site_uv">总访客数<span id="busuanzi_value_site_uv"></span>人</span>
+    <span class="post-meta-divider">|</span>
+<!-- 不算子计数初始值纠正 -->
+<script>
+$(document).ready(function() {
+
+    var int = setInterval(fixCount, 50);  // 50ms周期检测函数
+    var countOffset = 20000;  // 初始化首次数据
+
+    function fixCount() {            
+       if (document.getElementById("busuanzi_container_site_pv").style.display != "none")
+        {
+            $("#busuanzi_value_site_pv").html(parseInt($("#busuanzi_value_site_pv").html()) + countOffset); 
+            clearInterval(int);
+        }                  
+        if ($("#busuanzi_container_site_pv").css("display") != "none")
+        {
+            $("#busuanzi_value_site_uv").html(parseInt($("#busuanzi_value_site_uv").html()) + countOffset); // 加上初始数据 
+            clearInterval(int); // 停止检测
+        }  
+    }
+       	
+});
+</script> 
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+<script>
+if (document.querySelectorAll('pre.mermaid').length) {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js', () => {
+    mermaid.initialize({
+      theme    : 'forest',
+      logLevel : 3,
+      flowchart: { curve     : 'linear' },
+      gantt    : { axisFormat: '%m/%d/%Y' },
+      sequence : { actorMargin: 50 }
+    });
+  }, window.mermaid);
+}
+</script>
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '51d80812d0893d881403',
+      clientSecret: '90b5b7396136066a177432adae54af452cf7f876',
+      repo        : 'codewater404.github.io',
+      owner       : 'CodeWater404',
+      admin       : ['CodeWater404'],
+      id          : '015a0c7327436883232fff396296a5b3',
+        language: '',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>
