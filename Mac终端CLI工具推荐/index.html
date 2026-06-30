@@ -30,7 +30,7 @@
 <meta property="og:description" content="系统梳理 Mac 终端完整工具链：从终端模拟器 kitty、Shell 框架 Zim，到 fzf、ripgrep、lazygit、LazyVim 等核心工具，聚焦每个工具的核心价值。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-06-28T02:00:00.000Z">
-<meta property="article:modified_time" content="2026-06-28T11:04:13.664Z">
+<meta property="article:modified_time" content="2026-06-30T08:49:19.077Z">
 <meta property="article:author" content="Code Water">
 <meta property="article:tag" content="Mac">
 <meta property="article:tag" content="CLI">
@@ -228,10 +228,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2026-06-28 10:00:00 / 修改时间：19:04:13" itemprop="dateCreated datePublished" datetime="2026-06-28T10:00:00+08:00">2026-06-28</time>
+              <time title="创建时间：2026-06-28 10:00:00" itemprop="dateCreated datePublished" datetime="2026-06-28T10:00:00+08:00">2026-06-28</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-06-30 16:49:19" itemprop="dateModified" datetime="2026-06-30T16:49:19+08:00">2026-06-30</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="far fa-folder"></i>
@@ -265,9 +271,15 @@
 <span id="more"></span>
 
 <hr>
-<h2 id="终端模拟器：kitty"><a href="#终端模拟器：kitty" class="headerlink" title="终端模拟器：kitty"></a>终端模拟器：kitty</h2><p>所有工具的运行基础。kitty 是一个用 GPU 渲染的高性能终端模拟器，启动快、滚动流畅，原生支持图片内联显示（这也是 yazi 文件预览图片能用的前提）。内置分屏（不依赖 tmux），支持标签页，配置文件是单个 <code>kitty.conf</code>，改起来比大多数终端直观。对于在终端里花大量时间的人，换一个渲染性能好的终端模拟器是性价比很高的基础投资。</p>
+<h2 id="终端模拟器：kitty"><a href="#终端模拟器：kitty" class="headerlink" title="终端模拟器：kitty"></a>终端模拟器：<a target="_blank" rel="noopener" href="https://sw.kovidgoyal.net/kitty/">kitty</a></h2><blockquote>
+<p>详细安装与配置见：<a href="/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim">Mac 终端基础配置：kitty + Zim</a></p>
+</blockquote>
+<p>所有工具的运行基础。kitty 是一个用 GPU 渲染的高性能终端模拟器，启动快、滚动流畅，原生支持图片内联显示（这也是 yazi 文件预览图片能用的前提）。内置分屏（不依赖 tmux），支持标签页，配置文件是单个 <code>kitty.conf</code>，改起来比大多数终端直观。对于在终端里花大量时间的人，换一个渲染性能好的终端模拟器是性价比很高的基础投资。</p>
 <hr>
-<h2 id="Shell-框架：Zim"><a href="#Shell-框架：Zim" class="headerlink" title="Shell 框架：Zim"></a>Shell 框架：Zim</h2><p>macOS 自带 zsh，但裸 zsh 体验很差。Zim 是一个轻量的 zsh 插件管理框架，比 Oh My Zsh 启动速度快很多，通过 <code>.zimrc</code> 声明需要的插件，装好后自动生效。</p>
+<h2 id="Shell-框架：Zim"><a href="#Shell-框架：Zim" class="headerlink" title="Shell 框架：Zim"></a>Shell 框架：<a target="_blank" rel="noopener" href="https://zimfw.sh/">Zim</a></h2><blockquote>
+<p>详细安装与配置见：<a href="/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim">Mac 终端基础配置：kitty + Zim</a></p>
+</blockquote>
+<p>macOS 自带 zsh，但裸 zsh 体验很差。Zim 是一个轻量的 zsh 插件管理框架，比 Oh My Zsh 启动速度快很多，通过 <code>.zimrc</code> 声明需要的插件，装好后自动生效。</p>
 <p>当前配置里启用的插件：</p>
 <ul>
 <li><strong>fast-syntax-highlighting</strong>：实时高亮正在输入的命令，命令合法显绿色，输错显红色，按回车前就能发现拼写错误</li>
@@ -360,7 +372,10 @@
     <a href="/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/" rel="prev" title="Go 后端实现 Google 一键登录（ID Token 验证方案）">
       <i class="fa fa-chevron-left"></i> Go 后端实现 Google 一键登录（ID Token 验证方案）
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim/" rel="next" title="Mac 终端基础配置：kitty + Zim">
+      Mac 终端基础配置：kitty + Zim <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -436,7 +451,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-count">14</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -449,7 +464,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-count">29</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
