@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://blog.codewater.top/yazi%E7%BB%88%E7%AB%AF%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E5%99%A8/</loc>
+    <loc>https://blog.codewater.top/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90/</loc>
+    <lastmod>2026-07-01</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/%E8%A7%A3%E5%86%B3Git%E6%8A%A5%E9%94%99fatal-bad-object-HEAD/</loc>
     <lastmod>2026-07-01</lastmod>
   </url>
   <url>
@@ -9,64 +13,60 @@
     <lastmod>2026-07-01</lastmod>
   </url>
   <url>
-    <loc>https://blog.codewater.top/git-tag%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%E4%B8%8E%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF/</loc>
-    <lastmod>2026-06-30</lastmod>
-  </url>
-  <url>
     <loc>https://blog.codewater.top/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd/</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-01</lastmod>
   </url>
   <url>
-    <loc>https://blog.codewater.top/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90/</loc>
-    <lastmod>2026-06-30</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim/</loc>
-    <lastmod>2026-06-30</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/</loc>
-    <lastmod>2026-06-27</lastmod>
+    <loc>https://blog.codewater.top/yazi%E7%BB%88%E7%AB%AF%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E5%99%A8/</loc>
+    <lastmod>2026-07-01</lastmod>
   </url>
   <url>
     <loc>https://blog.codewater.top/tldr/</loc>
-    <lastmod>2026-06-27</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/%E8%A7%A3%E5%86%B3Git%E6%8A%A5%E9%94%99fatal-bad-object-HEAD/</loc>
-    <lastmod>2026-06-25</lastmod>
+    <lastmod>2026-07-01</lastmod>
   </url>
   <url>
     <loc>https://blog.codewater.top/hello-world/</loc>
-    <lastmod>2026-06-25</lastmod>
+    <lastmod>2026-07-01</lastmod>
   </url>
   <url>
-    <loc>https://blog.codewater.top/Git-view-the-history-of-the-specified-code-block/</loc>
-    <lastmod>2026-06-25</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/cli%E4%B8%AD%E9%9B%86%E6%88%90ai-%E4%BB%A5deepseek%E4%B8%BA%E4%BE%8B/</loc>
-    <lastmod>2026-06-25</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/cursor-export-ai-s-chat-records/</loc>
-    <lastmod>2026-06-25</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/codewater-first-post-hexo/</loc>
-    <lastmod>2026-06-25</lastmod>
+    <loc>https://blog.codewater.top/git-tag%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%E4%B8%8E%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF/</loc>
+    <lastmod>2026-07-01</lastmod>
   </url>
   <url>
     <loc>https://blog.codewater.top/goland-%E8%BF%9C%E7%A8%8B%E8%B0%83%E8%AF%95%E6%AD%A3%E5%9C%A8%E8%BF%90%E8%A1%8C%E4%B8%AD%E7%9A%84%E7%A8%8B%E5%BA%8F/</loc>
-    <lastmod>2026-06-25</lastmod>
+    <lastmod>2026-07-01</lastmod>
   </url>
   <url>
-    <loc>https://blog.codewater.top/Git-search-commits-by-all-branches/</loc>
-    <lastmod>2026-06-25</lastmod>
+    <loc>https://blog.codewater.top/cursor-export-ai-s-chat-records/</loc>
+    <lastmod>2026-07-01</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/codewater-first-post-hexo/</loc>
+    <lastmod>2026-07-01</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/cli%E4%B8%AD%E9%9B%86%E6%88%90ai-%E4%BB%A5deepseek%E4%B8%BA%E4%BE%8B/</loc>
+    <lastmod>2026-07-01</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim/</loc>
+    <lastmod>2026-07-01</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/</loc>
+    <lastmod>2026-07-01</lastmod>
   </url>
   <url>
     <loc>https://blog.codewater.top/Git-submodule%E5%B8%B8%E8%A7%81%E6%93%8D%E4%BD%9C%E7%94%A8%E6%B3%95/</loc>
-    <lastmod>2026-06-25</lastmod>
+    <lastmod>2026-07-01</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/Git-view-the-history-of-the-specified-code-block/</loc>
+    <lastmod>2026-07-01</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/Git-search-commits-by-all-branches/</loc>
+    <lastmod>2026-07-01</lastmod>
   </url>
   <url>
     <loc>https://blog.codewater.top/how-to-choose-a-desktop-configuration/</loc>
