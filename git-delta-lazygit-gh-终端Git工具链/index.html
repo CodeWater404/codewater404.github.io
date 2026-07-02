@@ -1,0 +1,242 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>终端里的 Git：git-delta + lazygit + gh | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="用 git-delta 给 diff 加语法高亮，用 lazygit 在 TUI 界面里完成 stage&#x2F;commit&#x2F;rebase，用 gh 在终端里操作 GitHub PR 和 Issue。三个工具各解决一块摩擦，装完即用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="终端里的 Git：git-delta + lazygit + gh">
+<meta property="og:url" content="https://blog.codewater.top/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="用 git-delta 给 diff 加语法高亮，用 lazygit 在 TUI 界面里完成 stage&#x2F;commit&#x2F;rebase，用 gh 在终端里操作 GitHub PR 和 Issue。三个工具各解决一块摩擦，装完即用。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p06.jpg">
+<meta property="article:published_time" content="2026-07-03T06:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-02T17:38:09.396Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="Mac">
+<meta property="article:tag" content="CLI">
+<meta property="article:tag" content="Terminal">
+<meta property="article:tag" content="效率工具">
+<meta property="article:tag" content="Git">
+<meta property="article:tag" content="lazygit">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p06.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "终端里的 Git：git-delta + lazygit + gh",
+  "url": "https://blog.codewater.top/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/",
+  "image": "https://blog.codewater.top/img/p06.jpg",
+  "datePublished": "2026-07-03T06:00:00.000Z",
+  "dateModified": "2026-07-02T17:38:09.396Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '终端里的 Git：git-delta + lazygit + gh',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">38</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p06.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">终端里的 Git：git-delta + lazygit + gh</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">终端里的 Git：git-delta + lazygit + gh</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-03T06:00:00.000Z" title="发表于 2026-07-03 14:00:00">2026-07-03</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-02T17:38:09.396Z" title="更新于 2026-07-03 01:38:09">2026-07-03</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/tools/">tools</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">1.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>Git 的默认输出是纯文本，diff 里的加减行只有红绿两色，<code>git log</code> 的历史要翻很多屏，PR 操作必须切到浏览器。这三件事都有更顺手的处理方式。</p>
+<p>git-delta 解决 diff 显示，lazygit 解决交互操作，gh 解决 GitHub 集成。</p>
+<span id="more"></span>
+
+<hr>
+<h2 id="git-delta：给-diff-加语法高亮和行号"><a href="#git-delta：给-diff-加语法高亮和行号" class="headerlink" title="git-delta：给 diff 加语法高亮和行号"></a><a target="_blank" rel="noopener" href="https://dandavison.github.io/delta/">git-delta</a>：给 diff 加语法高亮和行号</h2><p>git-delta 接管 git 的 pager，把原来的纯文本 diff 替换成带语法高亮、行号、可选左右对比视图的界面。</p>
+<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">brew install git-delta</span><br><span class="line"><span class="comment"># brew formula 名是 git-delta，不是 delta</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="配置到-gitconfig"><a href="#配置到-gitconfig" class="headerlink" title="配置到 .gitconfig"></a>配置到 .gitconfig</h3><p>delta 通过 <code>~/.gitconfig</code> 生效，不需要改 <code>.zshrc</code>：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[core]</span></span><br><span class="line">    <span class="attr">pager</span> = delta</span><br><span class="line">    <span class="comment"># 把 delta 设为所有 git 命令的分页器</span></span><br><span class="line"></span><br><span class="line"><span class="section">[interactive]</span></span><br><span class="line">    <span class="attr">diffFilter</span> = delta --color-<span class="literal">on</span>ly</span><br><span class="line">    <span class="comment"># git add -p 等交互式命令用 delta 着色</span></span><br><span class="line"></span><br><span class="line"><span class="section">[delta]</span></span><br><span class="line">    <span class="attr">navigate</span> = <span class="literal">true</span></span><br><span class="line">    <span class="comment"># n/N 在 diff 的文件间跳转</span></span><br><span class="line">    <span class="attr">side-by-side</span> = <span class="literal">true</span></span><br><span class="line">    <span class="comment"># 左右对比视图，适合宽屏；改为 false 则单列显示</span></span><br><span class="line">    <span class="attr">line-numbers</span> = <span class="literal">true</span></span><br><span class="line">    <span class="comment"># 显示行号</span></span><br><span class="line">    <span class="attr">syntax-theme</span> = Dracula</span><br><span class="line">    <span class="comment"># 语法高亮主题，见下方主题选择</span></span><br><span class="line"></span><br><span class="line"><span class="section">[merge]</span></span><br><span class="line">    <span class="attr">conflictstyle</span> = diff3</span><br><span class="line">    <span class="comment"># 合并冲突时显示三方对比（原始/我方/他方）</span></span><br><span class="line"></span><br><span class="line"><span class="section">[diff]</span></span><br><span class="line">    <span class="attr">colorMoved</span> = default</span><br><span class="line">    <span class="comment"># 移动的代码块用特殊颜色标记，不误判为删除+新增</span></span><br></pre></td></tr></table></figure>
+
+<p>配置完成后，<code>git diff</code>、<code>git show</code>、<code>git log -p</code> 都会自动走 delta。</p>
+<h3 id="主题选择"><a href="#主题选择" class="headerlink" title="主题选择"></a>主题选择</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">delta --list-syntax-themes</span><br><span class="line"><span class="comment"># 列出所有可用主题，每个会显示示例 diff</span></span><br></pre></td></tr></table></figure>
+
+<p>暗色系常用：<code>Dracula</code>、<code>Nord</code>、<code>OneHalfDark</code>；亮色系：<code>GitHub</code>。把选好的主题名填进 <code>syntax-theme</code> 字段即可。</p>
+<hr>
+<h2 id="lazygit：用-TUI-完成大部分-Git-操作"><a href="#lazygit：用-TUI-完成大部分-Git-操作" class="headerlink" title="lazygit：用 TUI 完成大部分 Git 操作"></a><a target="_blank" rel="noopener" href="https://github.com/jesseduffield/lazygit">lazygit</a>：用 TUI 完成大部分 Git 操作</h2><p>lazygit 是 git 的终端可视化界面，左侧面板覆盖工作区、分支、提交历史、stash 四大场景，日常 80% 的 Git 操作都可以在里面完成，不需要记参数。</p>
+<h3 id="安装-1"><a href="#安装-1" class="headerlink" title="安装"></a>安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brew install lazygit</span><br></pre></td></tr></table></figure>
+
+<h3 id="启动"><a href="#启动" class="headerlink" title="启动"></a>启动</h3><p>在任意 git 仓库目录下运行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lazygit</span><br></pre></td></tr></table></figure>
+
+<p>加一个别名到 <code>~/.zshrc</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">alias</span> lg=<span class="string">&#x27;lazygit&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="界面布局"><a href="#界面布局" class="headerlink" title="界面布局"></a>界面布局</h3><p><img src="/../images/lazygit.png" alt="lazygit页面"></p>
+<p>进入 lazygit 后，用 <code>1</code>-<code>5</code> 数字键切换左侧面板，也可以用 <code>h</code>&#x2F;<code>l</code> 左右移动：</p>
+<figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="symbol">1 </span>- Status          当前仓库状态</span><br><span class="line"><span class="symbol">2 </span>- <span class="keyword">Files</span>           工作区文件变更（最常用）</span><br><span class="line"><span class="symbol">3 </span>- Local Branches  本地分支</span><br><span class="line"><span class="symbol">4 </span>- Commits         提交历史</span><br><span class="line"><span class="symbol">5 </span>- Stash           暂存条目列表</span><br></pre></td></tr></table></figure>
+
+<p><code>↑</code>&#x2F;<code>↓</code> 在面板内移动选中项，<code>Enter</code> 进入详情，右侧大窗口实时显示 diff 预览（装了 delta 的话这里也走 delta 渲染）。</p>
+<h3 id="核心操作"><a href="#核心操作" class="headerlink" title="核心操作"></a>核心操作</h3><p><strong>Stage &#x2F; Unstage</strong>（在 Files 面板）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Space   对选中文件 stage/unstage（切换）</span><br><span class="line">a       对所有文件 stage/unstage</span><br></pre></td></tr></table></figure>
+
+<p><strong>提交</strong>：</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">c       提交（弹出编辑框输入 <span class="keyword">message</span>）</span><br><span class="line">C       用 $EDITOR 写提交信息（适合写多行 <span class="keyword">message</span>）</span><br><span class="line">A       修改上一条提交（amend）</span><br></pre></td></tr></table></figure>
+
+<p><strong>Push &#x2F; Pull</strong>：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-tag">P</span>       push 到远程</span><br><span class="line"><span class="selector-tag">p</span>       pull <span class="selector-tag">from</span> 远程</span><br></pre></td></tr></table></figure>
+
+<p><strong>分支操作</strong>（在 Branches 面板）：</p>
+<figure class="highlight cos"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">n       新建分支</span><br><span class="line">Space   切换到选中分支</span><br><span class="line"><span class="keyword">d</span>       删除本地分支</span><br><span class="line"><span class="keyword">r</span>       rebase 当前分支到选中分支</span><br><span class="line">M       <span class="keyword">merge</span> 选中分支到当前分支</span><br></pre></td></tr></table></figure>
+
+<p><strong>交互式 rebase</strong>（在 Commits 面板，选中某条提交后）：</p>
+<figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">e       进入 <span class="built_in">int</span>eractive rebase 模式</span><br><span class="line">d       删除选中提交</span><br><span class="line">s       squash 到上一条（保留 message）</span><br><span class="line">f       fixup（squash 不保留 message）</span><br><span class="line"><span class="string">[       把选中提交上移一位</span></span><br><span class="line"><span class="string">]</span>       把选中提交下移一位</span><br></pre></td></tr></table></figure>
+
+<p>命令行 rebase 需要手动编辑 todo 文件，lazygit 里直接选中拖动，直观很多。</p>
+<p><strong>查帮助</strong>：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?       显示当前面板所有快捷键</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="gh：在终端里操作-GitHub-PR-和-Issue"><a href="#gh：在终端里操作-GitHub-PR-和-Issue" class="headerlink" title="gh：在终端里操作 GitHub PR 和 Issue"></a><a target="_blank" rel="noopener" href="https://cli.github.com/">gh</a>：在终端里操作 GitHub PR 和 Issue</h2><p>gh 是 GitHub 官方命令行工具，PR 创建&#x2F;审核&#x2F;合并、Issue 管理、仓库操作都可以在终端里完成，减少浏览器切换。</p>
+<h3 id="安装-2"><a href="#安装-2" class="headerlink" title="安装"></a>安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brew install gh</span><br></pre></td></tr></table></figure>
+
+<h3 id="认证"><a href="#认证" class="headerlink" title="认证"></a>认证</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gh auth login</span><br><span class="line"><span class="comment"># 按提示选择 GitHub.com，HTTPS 协议，通过浏览器完成 OAuth 授权</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="仓库操作"><a href="#仓库操作" class="headerlink" title="仓库操作"></a>仓库操作</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">gh repo <span class="built_in">clone</span> owner/repo</span><br><span class="line"><span class="comment"># 克隆仓库，自动处理 SSH/HTTPS，不需要完整 URL</span></span><br><span class="line"></span><br><span class="line">gh repo view --web</span><br><span class="line"><span class="comment"># 在默认浏览器打开当前仓库的 GitHub 页面</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="PR-操作"><a href="#PR-操作" class="headerlink" title="PR 操作"></a>PR 操作</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">gh <span class="built_in">pr</span> list</span><br><span class="line"><span class="comment"># 列出当前仓库的 PR</span></span><br><span class="line"></span><br><span class="line">gh <span class="built_in">pr</span> create</span><br><span class="line"><span class="comment"># 交互式创建 PR，提示输入 title、body、base branch</span></span><br><span class="line"></span><br><span class="line">gh <span class="built_in">pr</span> create --title <span class="string">&quot;Fix login redirect&quot;</span> --body <span class="string">&quot;Fixes #42&quot;</span></span><br><span class="line"><span class="comment"># 非交互式创建 PR</span></span><br><span class="line"><span class="comment">#   --title：PR 标题</span></span><br><span class="line"><span class="comment">#   --body：PR 描述，支持 Markdown</span></span><br><span class="line"><span class="comment">#   --web：创建后立即在浏览器打开</span></span><br><span class="line"></span><br><span class="line">gh <span class="built_in">pr</span> checkout 42</span><br><span class="line"><span class="comment"># 切换到第 42 号 PR 对应的分支</span></span><br><span class="line"><span class="comment"># code review 时用这个在本地跑测试</span></span><br><span class="line"></span><br><span class="line">gh <span class="built_in">pr</span> view 42 --web</span><br><span class="line"><span class="comment"># 在浏览器里打开第 42 号 PR</span></span><br><span class="line"></span><br><span class="line">gh <span class="built_in">pr</span> checks 42</span><br><span class="line"><span class="comment"># 查看 PR 的 CI 检查状态（通过/失败/进行中）</span></span><br><span class="line"></span><br><span class="line">gh <span class="built_in">pr</span> merge 42 --squash</span><br><span class="line"><span class="comment"># squash merge，把 PR 里的提交压缩成一条</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Issue-操作"><a href="#Issue-操作" class="headerlink" title="Issue 操作"></a>Issue 操作</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">gh issue list</span><br><span class="line"><span class="comment"># 列出 issue</span></span><br><span class="line"></span><br><span class="line">gh issue create</span><br><span class="line"><span class="comment"># 交互式创建 issue</span></span><br><span class="line"></span><br><span class="line">gh issue view 15</span><br><span class="line"><span class="comment"># 查看第 15 号 issue</span></span><br><span class="line"></span><br><span class="line">gh issue close 15</span><br><span class="line"><span class="comment"># 关闭 issue</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="实用组合"><a href="#实用组合" class="headerlink" title="实用组合"></a>实用组合</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 列出分配给自己的 PR</span></span><br><span class="line">gh <span class="built_in">pr</span> list --assignee @me</span><br><span class="line"></span><br><span class="line"><span class="comment"># 创建 PR 并直接在浏览器打开（适合需要填写大量描述的情况）</span></span><br><span class="line">gh <span class="built_in">pr</span> create --web</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="gitconfig-完整配置"><a href="#gitconfig-完整配置" class="headerlink" title=".gitconfig 完整配置"></a>.gitconfig 完整配置</h2><figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[core]</span></span><br><span class="line">    <span class="attr">pager</span> = delta</span><br><span class="line"></span><br><span class="line"><span class="section">[interactive]</span></span><br><span class="line">    <span class="attr">diffFilter</span> = delta --color-<span class="literal">on</span>ly</span><br><span class="line"></span><br><span class="line"><span class="section">[delta]</span></span><br><span class="line">    <span class="attr">navigate</span> = <span class="literal">true</span></span><br><span class="line">    <span class="attr">side-by-side</span> = <span class="literal">true</span></span><br><span class="line">    <span class="attr">line-numbers</span> = <span class="literal">true</span></span><br><span class="line">    <span class="attr">syntax-theme</span> = Dracula</span><br><span class="line"></span><br><span class="line"><span class="section">[merge]</span></span><br><span class="line">    <span class="attr">conflictstyle</span> = diff3</span><br><span class="line"></span><br><span class="line"><span class="section">[diff]</span></span><br><span class="line">    <span class="attr">colorMoved</span> = default</span><br></pre></td></tr></table></figure>
+
+<p>lazygit 和 gh 不需要额外配置 <code>.gitconfig</code>，装完即用。</p>
+<hr>
+<h2 id="从哪里开始"><a href="#从哪里开始" class="headerlink" title="从哪里开始"></a>从哪里开始</h2><p>三个工具互相独立，可以按需单独装：</p>
+<ul>
+<li><strong>git-delta</strong>：先装，收益最直接。配置完 <code>.gitconfig</code> 之后跑一次 <code>git log -p</code>，立刻看到区别</li>
+<li><strong>lazygit</strong>：在一个有改动的仓库里启动，先按 <code>?</code> 看快捷键，把 stage + commit + push 这条主线跑通</li>
+<li><strong>gh</strong>：有 GitHub 工作流的项目里最实用，先用 <code>gh pr list</code> 和 <code>gh pr checkout</code> 熟悉一下，再用 <code>gh pr create</code> 替代浏览器操作</li>
+</ul>
+<p>系列前几篇装过的 fzf，lazygit 内部的分支搜索和文件选择会自动调用，不需要额外配置。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/">https://blog.codewater.top/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Mac/">Mac</a><a class="post-meta__tags" href="/tags/CLI/">CLI</a><a class="post-meta__tags" href="/tags/Terminal/">Terminal</a><a class="post-meta__tags" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/">效率工具</a><a class="post-meta__tags" href="/tags/Git/">Git</a><a class="post-meta__tags" href="/tags/lazygit/">lazygit</a></div><div class="post-share"><div class="social-share" data-image="/img/p06.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/atuin-zoxide-%E7%BB%88%E7%AB%AF%E5%8E%86%E5%8F%B2%E4%B8%8E%E7%9B%AE%E5%BD%95%E8%B7%B3%E8%BD%AC/" title="Shell 历史与目录跳转的现代替代：atuin + zoxide"><img class="cover" src="/img/p05.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Shell 历史与目录跳转的现代替代：atuin + zoxide</div></div><div class="info-2"><div class="info-item-1">用 atuin 替换 shell 历史记录，获得可过滤的 Ctrl+R 搜索界面；用 zoxide 替换 cd，输入路径片段直接跳转。两个工具安装简单、收益立竿见影。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/yazi%E7%BB%88%E7%AB%AF%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E5%99%A8/" title="yazi：终端里的三栏文件管理器"><img class="cover" src="/img/p15.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-01</div><div class="info-item-2">yazi：终端里的三栏文件管理器</div></div><div class="info-2"><div class="info-item-1">Mac 终端文件管理器 yazi 完整教程：安装与依赖配置、核心快捷键速查、kitty 图片预览配置、退出自动 cd 的 y 函数，以及插件安装方法。</div></div></div></a><a class="pagination-related" href="/atuin-zoxide-%E7%BB%88%E7%AB%AF%E5%8E%86%E5%8F%B2%E4%B8%8E%E7%9B%AE%E5%BD%95%E8%B7%B3%E8%BD%AC/" title="Shell 历史与目录跳转的现代替代：atuin + zoxide"><img class="cover" src="/img/p05.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-02</div><div class="info-item-2">Shell 历史与目录跳转的现代替代：atuin + zoxide</div></div><div class="info-2"><div class="info-item-1">用 atuin 替换 shell 历史记录，获得可过滤的 Ctrl+R 搜索界面；用 zoxide 替换 cd，输入路径片段直接跳转。两个工具安装简单、收益立竿见影。</div></div></div></a><a class="pagination-related" href="/%E6%96%87%E4%BB%B6%E6%9F%A5%E7%9C%8B%E5%B7%A5%E5%85%B7-bat-eza-glow-mdcat/" title="文件查看升级：bat + eza + glow + mdcat"><img class="cover" src="/img/p16.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-01</div><div class="info-item-2">文件查看升级：bat + eza + glow + mdcat</div></div><div class="info-2"><div class="info-item-1">Mac 终端文件查看升级：bat 替换 cat、eza 替换 ls、glow 和 mdcat 渲染 Markdown，含安装、alias 配置和常用参数速查。</div></div></div></a><a class="pagination-related" href="/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90/" title="Mac 终端 CLI 工具推荐：那些让命令行效率翻倍的家伙"><img class="cover" src="/img/p05b.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-06-28</div><div class="info-item-2">Mac 终端 CLI 工具推荐：那些让命令行效率翻倍的家伙</div></div><div class="info-2"><div class="info-item-1">系统梳理 Mac 终端完整工具链：从终端模拟器 kitty、Shell 框架 Zim，到 fzf、ripgrep、lazygit、LazyVim 等核心工具，聚焦每个工具的核心价值。</div></div></div></a><a class="pagination-related" href="/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd/" title="终端搜索三件套：fzf + ripgrep + fd，以及 jq"><img class="cover" src="/img/p17.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-06-30</div><div class="info-item-2">终端搜索三件套：fzf + ripgrep + fd，以及 jq</div></div><div class="info-2"><div class="info-item-1">用 fzf、ripgrep、fd、jq 替换 Mac 终端里的 grep/find：模糊搜索框架让任何命令可交互，rg 在大型仓库里秒级全文搜索，fd 语法比 find 直觉十倍，jq 处理 API 返回的 JSON。</div></div></div></a><a class="pagination-related" href="/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim/" title="Mac 终端基础配置：kitty + Zim"><img class="cover" src="/img/p06.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-06-30</div><div class="info-item-2">Mac 终端基础配置：kitty + Zim</div></div><div class="info-2"><div class="info-item-1">从零开始配置 Mac 终端环境：用 GPU 加速的 kitty 替换默认终端，用 Zim 框架升级 zsh，配齐语法高亮、自动补全、fzf 模糊补全等插件。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">38</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#git-delta%EF%BC%9A%E7%BB%99-diff-%E5%8A%A0%E8%AF%AD%E6%B3%95%E9%AB%98%E4%BA%AE%E5%92%8C%E8%A1%8C%E5%8F%B7"><span class="toc-number">1.</span> <span class="toc-text">git-delta：给 diff 加语法高亮和行号</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%89%E8%A3%85"><span class="toc-number">1.1.</span> <span class="toc-text">安装</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%85%8D%E7%BD%AE%E5%88%B0-gitconfig"><span class="toc-number">1.2.</span> <span class="toc-text">配置到 .gitconfig</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BB%E9%A2%98%E9%80%89%E6%8B%A9"><span class="toc-number">1.3.</span> <span class="toc-text">主题选择</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#lazygit%EF%BC%9A%E7%94%A8-TUI-%E5%AE%8C%E6%88%90%E5%A4%A7%E9%83%A8%E5%88%86-Git-%E6%93%8D%E4%BD%9C"><span class="toc-number">2.</span> <span class="toc-text">lazygit：用 TUI 完成大部分 Git 操作</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%89%E8%A3%85-1"><span class="toc-number">2.1.</span> <span class="toc-text">安装</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%90%AF%E5%8A%A8"><span class="toc-number">2.2.</span> <span class="toc-text">启动</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%95%8C%E9%9D%A2%E5%B8%83%E5%B1%80"><span class="toc-number">2.3.</span> <span class="toc-text">界面布局</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%A0%B8%E5%BF%83%E6%93%8D%E4%BD%9C"><span class="toc-number">2.4.</span> <span class="toc-text">核心操作</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#gh%EF%BC%9A%E5%9C%A8%E7%BB%88%E7%AB%AF%E9%87%8C%E6%93%8D%E4%BD%9C-GitHub-PR-%E5%92%8C-Issue"><span class="toc-number">3.</span> <span class="toc-text">gh：在终端里操作 GitHub PR 和 Issue</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%89%E8%A3%85-2"><span class="toc-number">3.1.</span> <span class="toc-text">安装</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%A4%E8%AF%81"><span class="toc-number">3.2.</span> <span class="toc-text">认证</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%93%E5%BA%93%E6%93%8D%E4%BD%9C"><span class="toc-number">3.3.</span> <span class="toc-text">仓库操作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PR-%E6%93%8D%E4%BD%9C"><span class="toc-number">3.4.</span> <span class="toc-text">PR 操作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Issue-%E6%93%8D%E4%BD%9C"><span class="toc-number">3.5.</span> <span class="toc-text">Issue 操作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%94%A8%E7%BB%84%E5%90%88"><span class="toc-number">3.6.</span> <span class="toc-text">实用组合</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#gitconfig-%E5%AE%8C%E6%95%B4%E9%85%8D%E7%BD%AE"><span class="toc-number">4.</span> <span class="toc-text">.gitconfig 完整配置</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%8E%E5%93%AA%E9%87%8C%E5%BC%80%E5%A7%8B"><span class="toc-number">5.</span> <span class="toc-text">从哪里开始</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/" title="终端里的 Git：git-delta + lazygit + gh"><img src="/img/p06.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="终端里的 Git：git-delta + lazygit + gh"/></a><div class="content"><a class="title" href="/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/" title="终端里的 Git：git-delta + lazygit + gh">终端里的 Git：git-delta + lazygit + gh</a><time datetime="2026-07-03T06:00:00.000Z" title="发表于 2026-07-03 14:00:00">2026-07-03</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/atuin-zoxide-%E7%BB%88%E7%AB%AF%E5%8E%86%E5%8F%B2%E4%B8%8E%E7%9B%AE%E5%BD%95%E8%B7%B3%E8%BD%AC/" title="Shell 历史与目录跳转的现代替代：atuin + zoxide"><img src="/img/p05.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Shell 历史与目录跳转的现代替代：atuin + zoxide"/></a><div class="content"><a class="title" href="/atuin-zoxide-%E7%BB%88%E7%AB%AF%E5%8E%86%E5%8F%B2%E4%B8%8E%E7%9B%AE%E5%BD%95%E8%B7%B3%E8%BD%AC/" title="Shell 历史与目录跳转的现代替代：atuin + zoxide">Shell 历史与目录跳转的现代替代：atuin + zoxide</a><time datetime="2026-07-02T02:00:00.000Z" title="发表于 2026-07-02 10:00:00">2026-07-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/yazi%E7%BB%88%E7%AB%AF%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E5%99%A8/" title="yazi：终端里的三栏文件管理器"><img src="/img/p15.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="yazi：终端里的三栏文件管理器"/></a><div class="content"><a class="title" href="/yazi%E7%BB%88%E7%AB%AF%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E5%99%A8/" title="yazi：终端里的三栏文件管理器">yazi：终端里的三栏文件管理器</a><time datetime="2026-07-01T06:00:00.000Z" title="发表于 2026-07-01 14:00:00">2026-07-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E6%96%87%E4%BB%B6%E6%9F%A5%E7%9C%8B%E5%B7%A5%E5%85%B7-bat-eza-glow-mdcat/" title="文件查看升级：bat + eza + glow + mdcat"><img src="/img/p16.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="文件查看升级：bat + eza + glow + mdcat"/></a><div class="content"><a class="title" href="/%E6%96%87%E4%BB%B6%E6%9F%A5%E7%9C%8B%E5%B7%A5%E5%85%B7-bat-eza-glow-mdcat/" title="文件查看升级：bat + eza + glow + mdcat">文件查看升级：bat + eza + glow + mdcat</a><time datetime="2026-07-01T02:00:00.000Z" title="发表于 2026-07-01 10:00:00">2026-07-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd/" title="终端搜索三件套：fzf + ripgrep + fd，以及 jq"><img src="/img/p17.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="终端搜索三件套：fzf + ripgrep + fd，以及 jq"/></a><div class="content"><a class="title" href="/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd/" title="终端搜索三件套：fzf + ripgrep + fd，以及 jq">终端搜索三件套：fzf + ripgrep + fd，以及 jq</a><time datetime="2026-06-30T06:00:00.000Z" title="发表于 2026-06-30 14:00:00">2026-06-30</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>
