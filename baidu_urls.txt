@@ -1,5 +1,5 @@
+https://blog.codewater.top/neovim-lazyvim-%E7%BB%88%E7%AB%AF%E7%BC%96%E8%BE%91%E5%99%A8/
+https://blog.codewater.top/fastfetch-pokemon-colorscripts-%E7%BB%88%E7%AB%AF%E5%A4%96%E8%A7%82/
 https://blog.codewater.top/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/
 https://blog.codewater.top/atuin-zoxide-%E7%BB%88%E7%AB%AF%E5%8E%86%E5%8F%B2%E4%B8%8E%E7%9B%AE%E5%BD%95%E8%B7%B3%E8%BD%AC/
 https://blog.codewater.top/yazi%E7%BB%88%E7%AB%AF%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E5%99%A8/
-https://blog.codewater.top/%E6%96%87%E4%BB%B6%E6%9F%A5%E7%9C%8B%E5%B7%A5%E5%85%B7-bat-eza-glow-mdcat/
-https://blog.codewater.top/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd/
