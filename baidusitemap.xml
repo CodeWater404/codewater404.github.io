@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://blog.codewater.top/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd/</loc>
+    <lastmod>2026-07-04</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</loc>
+    <lastmod>2026-07-04</lastmod>
+  </url>
+  <url>
     <loc>https://blog.codewater.top/neovim-lazyvim-%E7%BB%88%E7%AB%AF%E7%BC%96%E8%BE%91%E5%99%A8/</loc>
     <lastmod>2026-07-03</lastmod>
   </url>
@@ -23,10 +31,6 @@
   <url>
     <loc>https://blog.codewater.top/%E6%96%87%E4%BB%B6%E6%9F%A5%E7%9C%8B%E5%B7%A5%E5%85%B7-bat-eza-glow-mdcat/</loc>
     <lastmod>2026-07-01</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd/</loc>
-    <lastmod>2026-06-30</lastmod>
   </url>
   <url>
     <loc>https://blog.codewater.top/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim/</loc>
