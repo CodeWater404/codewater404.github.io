@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://blog.codewater.top/Git%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B-%E5%8E%9F%E7%90%86%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BC%81%E4%B8%9A%E5%AE%9E%E8%B7%B5/</loc>
+    <lastmod>2026-07-05</lastmod>
+  </url>
+  <url>
     <loc>https://blog.codewater.top/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd/</loc>
     <lastmod>2026-07-04</lastmod>
   </url>
