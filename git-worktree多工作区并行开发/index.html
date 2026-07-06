@@ -1,0 +1,266 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>git worktree 教程：多工作区并行开发，告别 stash 切分支 | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="git worktree 完整教程：add&#x2F;list&#x2F;remove&#x2F;prune 四件套、hotfix 不打断 feature 开发的工作流、move&#x2F;lock 进阶操作，以及与多次 clone 的取舍对比。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="git worktree 教程：多工作区并行开发，告别 stash 切分支">
+<meta property="og:url" content="https://blog.codewater.top/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="git worktree 完整教程：add&#x2F;list&#x2F;remove&#x2F;prune 四件套、hotfix 不打断 feature 开发的工作流、move&#x2F;lock 进阶操作，以及与多次 clone 的取舍对比。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p24.jpg">
+<meta property="article:published_time" content="2026-07-06T02:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-06T02:00:00.000Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="Git">
+<meta property="article:tag" content="工程实践">
+<meta property="article:tag" content="CLI">
+<meta property="article:tag" content="worktree">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p24.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "git worktree 教程：多工作区并行开发，告别 stash 切分支",
+  "url": "https://blog.codewater.top/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/",
+  "image": "https://blog.codewater.top/img/p24.jpg",
+  "datePublished": "2026-07-06T02:00:00.000Z",
+  "dateModified": "2026-07-06T02:00:00.000Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'git worktree 教程：多工作区并行开发，告别 stash 切分支',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><style>.category-lists{background:linear-gradient(135deg,#667eea55,#f5576c44,#4facfe44,#43e97b44);border-radius:20px;padding:28px !important;position:relative;overflow:hidden}.category-lists::before{content:'';position:absolute;top:-80px;left:-80px;width:240px;height:240px;background:radial-gradient(circle,#a78bfa88,transparent 70%);border-radius:50%;pointer-events:none}.category-lists::after{content:'';position:absolute;bottom:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,#f9a8d488,transparent 70%);border-radius:50%;pointer-events:none}.category-lists .category-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;padding:0 !important;list-style:none !important;margin:0 !important;position:relative;z-index:1}.category-lists .category-list>li.category-list-item{background:rgba(255,255,255,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.55);border-radius:14px;padding:22px 20px 18px;margin:0 !important;box-shadow:0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.7);transition:transform .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}.category-lists .category-list>li.category-list-item::before{display:none !important}.category-lists .category-list>li.category-list-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.7)}.category-lists .category-list-link{font-size:1rem;font-weight:700;color:#3b3b5c !important;display:block;margin-bottom:10px;line-height:1.3}.category-lists .category-list-count{display:inline-block;font-size:.78rem;font-weight:600;color:#5a5a7a !important;background:rgba(255,255,255,0.5);padding:2px 10px;border-radius:20px;margin-left:0 !important;border:1px solid rgba(255,255,255,0.7)}.category-lists .category-list-count::before,.category-lists .category-list-count::after{content:'' !important}.category-lists .category-list-child{margin-top:10px;padding:10px 0 0 0 !important;border-top:1px solid rgba(255,255,255,0.4) !important;list-style:none !important}.category-lists .category-list-child li.category-list-item{margin:5px 0 !important;padding:0 !important}.category-lists .category-list-child li.category-list-item::before{display:none !important}.category-lists .category-list-child .category-list-link{font-size:.82rem;font-weight:400;color:#5a5a7a !important;margin-bottom:0}.category-lists .category-list-child .category-list-count{font-size:.7rem;padding:1px 7px}[data-theme=dark] .category-lists .category-list>li.category-list-item{background:rgba(30,30,50,0.45);border-color:rgba(255,255,255,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.1)}[data-theme=dark] .category-lists .category-list-link{color:#e2e2f0 !important}[data-theme=dark] .category-lists .category-list-count{color:#a0a0c0 !important;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}[data-theme=dark] .category-lists .category-list-child .category-list-link{color:#a0a0c0 !important}</style><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Code Water" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">25</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">47</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p24.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">git worktree 教程：多工作区并行开发，告别 stash 切分支</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">git worktree 教程：多工作区并行开发，告别 stash 切分支</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-06T02:00:00.000Z" title="发表于 2026-07-06 10:00:00">2026-07-06</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-06T02:00:00.000Z" title="更新于 2026-07-06 10:00:00">2026-07-06</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/git/">git</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2.2k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>7分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>改一个 feature 改到一半，线上突然报了个 bug 要紧急修复。这时候你有两个选择：<code>git stash</code> 存起来切分支，修完再切回来 <code>stash pop</code>；或者随手 commit 一个 “WIP”（Work In Progress，表示”改到一半”的占位提交）再切。前者容易在 stash 栈里越积越多忘了恢复，后者污染提交历史。而且切换分支后 IDE 索引重建、依赖重装，来回折腾一次十几分钟就没了。</p>
+<p><code>git worktree</code> 是 Git 内置的第三种方案：给同一个仓库挂多个工作目录，每个目录检出不同分支，互不干扰。修 bug 去另一个目录修，手头的改动原地不动。</p>
+<span id="more"></span>
+
+<blockquote>
+<p>Git 三区域、分支模型等基础概念见：<a href="/Git%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B-%E5%8E%9F%E7%90%86%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BC%81%E4%B8%9A%E5%AE%9E%E8%B7%B5">Git 基础教程：原理、常见操作与企业实践规范</a></p>
+</blockquote>
+<h2 id="worktree-的工作原理：一个仓库，多个工作目录"><a href="#worktree-的工作原理：一个仓库，多个工作目录" class="headerlink" title="worktree 的工作原理：一个仓库，多个工作目录"></a>worktree 的工作原理：一个仓库，多个工作目录</h2><p>worktree 是 Git 自带的子命令（Git 2.5+ 引入，2.17+ 功能完整），默认情况下每个仓库只有一个工作目录——也就是你 clone 下来的那个，称为<strong>主工作区（main worktree）</strong>。<code>git worktree add</code> 可以额外创建<strong>链接工作区（linked worktree）</strong>，它们共享同一份 <code>.git</code> 对象库和引用，但各自有独立的工作目录、暂存区和 HEAD。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">graph TB</span><br><span class="line">    subgraph repo[&quot;.git 对象库（共享）&quot;]</span><br><span class="line">        objects[&quot;objects/ 提交对象&quot;]</span><br><span class="line">        refs[&quot;refs/ 分支引用&quot;]</span><br><span class="line">        wt[worktrees/ 各工作区元数据]</span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    subgraph main[&quot;主工作区 ~/code/myapp&quot;]</span><br><span class="line">        m_head[&quot;HEAD → feature/login&quot;]</span><br><span class="line">        m_files[工作目录 + 独立暂存区]</span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    subgraph hotfix[&quot;链接工作区 ~/code/myapp-hotfix&quot;]</span><br><span class="line">        h_head[&quot;HEAD → hotfix/pay-crash&quot;]</span><br><span class="line">        h_files[工作目录 + 独立暂存区]</span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    main --&gt; repo</span><br><span class="line">    hotfix --&gt; repo</span><br></pre></td></tr></table></figure>
+
+<p>关键点：</p>
+<ul>
+<li><strong>提交共享</strong>：任何一个工作区里的 commit，其他工作区立即可见（本来就是同一个仓库）</li>
+<li><strong>状态隔离</strong>：每个工作区有自己的 HEAD、index 和未提交改动，互不影响</li>
+<li><strong>磁盘开销小</strong>：链接工作区不复制 <code>.git</code> 对象库，只多一份检出的源码文件</li>
+</ul>
+<p>链接工作区目录下的 <code>.git</code> 不是目录而是一个文本文件，内容指向主仓库的 <code>.git/worktrees/&lt;name&gt;</code>，这就是”链接”的含义。</p>
+<h2 id="git-worktree-基本操作四件套：add-list-remove-prune"><a href="#git-worktree-基本操作四件套：add-list-remove-prune" class="headerlink" title="git worktree 基本操作四件套：add &#x2F; list &#x2F; remove &#x2F; prune"></a>git worktree 基本操作四件套：add &#x2F; list &#x2F; remove &#x2F; prune</h2><h3 id="add：创建工作区"><a href="#add：创建工作区" class="headerlink" title="add：创建工作区"></a>add：创建工作区</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git worktree add ../myapp-hotfix hotfix/pay-crash</span><br><span class="line"><span class="comment">#                ../myapp-hotfix：新工作区的路径，习惯放在主工作区同级目录</span></span><br><span class="line"><span class="comment">#                hotfix/pay-crash：要检出的已有分支</span></span><br></pre></td></tr></table></figure>
+
+<p>如果分支还不存在，用 <code>-b</code> 顺便创建：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git worktree add -b hotfix/pay-crash ../myapp-hotfix origin/main</span><br><span class="line"><span class="comment">#                -b：branch，基于起点创建新分支并检出</span></span><br><span class="line"><span class="comment">#                origin/main：新分支的起点，省略则基于当前 HEAD</span></span><br></pre></td></tr></table></figure>
+
+<p>不指定分支时，Git 会用路径的最后一段作为分支名自动创建（同名分支已存在则直接检出）；如果只想临时看某个 commit 的代码、不想建分支，加 <code>--detach</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git worktree add --detach ../myapp-v1.2 v1.2.0</span><br><span class="line"><span class="comment">#                --detach：以 detached HEAD 方式检出，不创建也不占用分支</span></span><br><span class="line"><span class="comment">#                v1.2.0：任意 commit-ish，tag、commit hash 都可以</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="list：查看所有工作区"><a href="#list：查看所有工作区" class="headerlink" title="list：查看所有工作区"></a>list：查看所有工作区</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git worktree list</span><br><span class="line"><span class="comment"># /Users/dylan/code/myapp          a1b2c3d [feature/login]</span></span><br><span class="line"><span class="comment"># /Users/dylan/code/myapp-hotfix   e4f5g6h [hotfix/pay-crash]</span></span><br><span class="line"><span class="comment"># /Users/dylan/code/myapp-v1.2     i7j8k9l (detached HEAD)</span></span><br></pre></td></tr></table></figure>
+
+<p>第一行永远是主工作区。加 <code>--porcelain</code> 输出机器可读格式，方便写脚本。</p>
+<h3 id="remove：删除工作区"><a href="#remove：删除工作区" class="headerlink" title="remove：删除工作区"></a>remove：删除工作区</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git worktree remove ../myapp-hotfix</span><br><span class="line"><span class="comment"># 有未提交改动时会拒绝删除，确认不要了加 --force 强删</span></span><br></pre></td></tr></table></figure>
+
+<p>remove 只删工作目录和元数据，分支还在。工作区用完、分支也合并了，记得单独删分支：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git branch -d hotfix/pay-crash</span><br><span class="line"><span class="comment">#          -d：delete，删除已合并的分支，未合并会拒绝</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="prune：清理失效记录"><a href="#prune：清理失效记录" class="headerlink" title="prune：清理失效记录"></a>prune：清理失效记录</h3><p>如果你没用 <code>remove</code> 而是直接 <code>rm -rf</code> 删了工作区目录，<code>.git/worktrees/</code> 里会残留元数据，<code>git worktree list</code> 还能看到它。用 prune 清理：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git worktree prune</span><br><span class="line"><span class="comment"># 扫描并删除指向已不存在目录的工作区元数据</span></span><br></pre></td></tr></table></figure>
+
+<p>Git 也会在 <code>gc</code> 时自动 prune 超过宽限期（默认 3 个月，由 <code>gc.worktreePruneExpire</code> 控制）的失效工作区，但手动删目录后建议立即跑一次。</p>
+<h2 id="场景一：hotfix-不打断手头的-feature"><a href="#场景一：hotfix-不打断手头的-feature" class="headerlink" title="场景一：hotfix 不打断手头的 feature"></a>场景一：hotfix 不打断手头的 feature</h2><p>最经典的用法。假设你在 <code>feature/login</code> 上开发到一半：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 基于线上分支创建 hotfix 工作区，手头改动完全不用动</span></span><br><span class="line">git worktree add -b hotfix/pay-crash ../myapp-hotfix origin/main</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 去新目录修 bug、提交、推送</span></span><br><span class="line"><span class="built_in">cd</span> ../myapp-hotfix</span><br><span class="line">vim internal/pay/handler.go</span><br><span class="line">git add -A &amp;&amp; git commit -m <span class="string">&quot;fix: 修复支付回调空指针&quot;</span></span><br><span class="line">git push -u origin hotfix/pay-crash</span><br><span class="line"><span class="comment">#        -u：upstream，建立本地分支与远端分支的跟踪关系</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 修完回主工作区继续开发，hotfix 工作区留着等 review</span></span><br><span class="line"><span class="built_in">cd</span> ../myapp</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. PR 合并后清理</span></span><br><span class="line">git worktree remove ../myapp-hotfix</span><br><span class="line">git branch -d hotfix/pay-crash</span><br></pre></td></tr></table></figure>
+
+<p>整个过程不需要 stash，也不会产生 WIP commit，主工作区连分支都没切过，IDE 状态和构建缓存原封不动。</p>
+<h2 id="场景二：并行-code-review-与长时间任务"><a href="#场景二：并行-code-review-与长时间任务" class="headerlink" title="场景二：并行 code review 与长时间任务"></a>场景二：并行 code review 与长时间任务</h2><p><strong>review 同事的 PR</strong>：不想为了跑一下同事的代码而切走自己的分支，开个临时工作区：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git fetch origin</span><br><span class="line">git worktree add --detach ../myapp-review origin/feature/new-api</span><br><span class="line"><span class="comment"># --detach：只是看看代码跑跑测试，不需要本地分支</span></span><br><span class="line"><span class="built_in">cd</span> ../myapp-review &amp;&amp; go <span class="built_in">test</span> ./...</span><br></pre></td></tr></table></figure>
+
+<p><strong>长时间构建 &#x2F; 跑测试</strong>：完整测试套件要跑 20 分钟，期间想继续写代码。在另一个工作区跑测试，主工作区照常编辑，两边文件互不干扰：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git worktree add ../myapp-ci feature/login</span><br><span class="line"><span class="comment"># 报错：fatal: &#x27;feature/login&#x27; is already used by worktree ...</span></span><br></pre></td></tr></table></figure>
+
+<p>这里会撞上 worktree 的一条硬规则：<strong>同一个分支同时只能被一个工作区检出</strong>，否则两边提交会让对方的 HEAD 和工作目录脱节。绕过方式是基于当前提交用 detached HEAD 跑：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git worktree add --detach ../myapp-ci HEAD</span><br><span class="line"><span class="built_in">cd</span> ../myapp-ci &amp;&amp; make <span class="built_in">test</span>   <span class="comment"># 慢任务在这跑</span></span><br><span class="line"><span class="built_in">cd</span> ../myapp                   <span class="comment"># 回来继续写代码</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="进阶操作：move-lock-repair"><a href="#进阶操作：move-lock-repair" class="headerlink" title="进阶操作：move &#x2F; lock &#x2F; repair"></a>进阶操作：move &#x2F; lock &#x2F; repair</h2><p><strong>move</strong>：工作区目录想换个位置，不要直接 <code>mv</code>（会破坏 <code>.git</code> 文件里的路径引用），用：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git worktree move ../myapp-hotfix ~/work/myapp-hotfix</span><br><span class="line"><span class="comment"># 移动工作目录并自动更新双向路径引用</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>lock</strong>：工作区放在移动硬盘或网络盘上时，防止盘没挂载时被 prune 误清理：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git worktree lock ../myapp-usb --reason <span class="string">&quot;在移动硬盘上&quot;</span></span><br><span class="line"><span class="comment">#                 --reason：说明锁定原因，unlock 前 list 可见</span></span><br><span class="line">git worktree unlock ../myapp-usb</span><br></pre></td></tr></table></figure>
+
+<p>被 lock 的工作区也不能被 move 和 remove，需要先 unlock。</p>
+<p><strong>repair</strong>：如果已经手动 <code>mv</code> 过目录导致链接断裂，或主仓库整个换了位置，用 repair 修复引用：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git worktree repair ~/work/myapp-hotfix</span><br><span class="line"><span class="comment"># 省略路径参数则修复主仓库到各工作区的引用</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="worktree-踩坑清单：依赖不共享、submodule-与-IDE"><a href="#worktree-踩坑清单：依赖不共享、submodule-与-IDE" class="headerlink" title="worktree 踩坑清单：依赖不共享、submodule 与 IDE"></a>worktree 踩坑清单：依赖不共享、submodule 与 IDE</h2><p><strong>依赖目录不共享</strong>。worktree 只共享 Git 数据，<code>node_modules/</code>、Python venv、构建产物这些 gitignore 的文件每个工作区都要重新生成。前端项目每开一个工作区就要 <code>npm install</code> 一次，这是 worktree 最大的隐性成本。Go 项目好一些，module 缓存在 <code>$GOPATH/pkg/mod</code> 全局共享。</p>
+<p><strong>submodule 支持不完整</strong>。带 submodule 的仓库创建工作区后，需要在新工作区里手动 <code>git submodule update --init</code>；官方文档明确提示对 superproject 做多工作区检出的支持不完整、不推荐（<code>man git-worktree</code> 的 BUGS 一节），且含 submodule 的工作区不能用 <code>move</code> 移动、<code>remove</code> 删除时必须加 <code>--force</code>。重度使用 submodule 的项目建议先小范围验证。</p>
+<p><strong>IDE 多开的内存开销</strong>。每个工作区是独立目录，IDE 会当成独立项目建索引。GoLand&#x2F;IDEA 同时开两三个大项目窗口，内存占用直接翻倍。VS Code 相对轻量，或者用只跑命令行的方式使用副工作区。</p>
+<p><strong>hooks 与配置共享</strong>。<code>.git/hooks</code> 和仓库级 <code>git config</code> 是所有工作区共享的（除非启用 <code>extensions.worktreeConfig</code> 做每工作区配置）。依赖 hooks 里写死路径的项目要注意路径可能指向主工作区。</p>
+<h2 id="worktree-还是再-clone-一份？"><a href="#worktree-还是再-clone-一份？" class="headerlink" title="worktree 还是再 clone 一份？"></a>worktree 还是再 clone 一份？</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>worktree</th>
+<th>多次 clone</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>磁盘占用</td>
+<td>共享 <code>.git</code>，只多源码文件</td>
+<td>每份都有完整对象库</td>
+</tr>
+<tr>
+<td>提交可见性</td>
+<td>即时共享，无需 push&#x2F;fetch</td>
+<td>要经过远端中转（或本地 remote）</td>
+</tr>
+<tr>
+<td>分支限制</td>
+<td>同一分支只能检出一次</td>
+<td>无限制</td>
+</tr>
+<tr>
+<td>配置&#x2F;hooks</td>
+<td>共享，改一处全生效</td>
+<td>完全独立</td>
+</tr>
+<tr>
+<td>误操作影响面</td>
+<td>损坏 <code>.git</code> 影响所有工作区</td>
+<td>相互隔离</td>
+</tr>
+</tbody></table>
+<p>日常并行开发（hotfix、review、跑测试）用 worktree，成本低、提交即时同步。需要完全隔离的场景——比如要对 <code>.git</code> 本身做危险操作、或两份代码用完全不同的仓库配置——再考虑单独 clone。</p>
+<p>一句话总结使用节奏：<code>add</code> 开新工作区，干完 <code>remove</code>，手滑直接删了目录就 <code>prune</code>。把”切分支”变成”切目录”，stash 栈从此清净。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/">https://blog.codewater.top/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Git/">Git</a><a class="post-meta__tags" href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/">工程实践</a><a class="post-meta__tags" href="/tags/CLI/">CLI</a><a class="post-meta__tags" href="/tags/worktree/">worktree</a></div><div class="post-share"><div class="social-share" data-image="/img/p24.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/Git%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B-%E5%8E%9F%E7%90%86%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BC%81%E4%B8%9A%E5%AE%9E%E8%B7%B5/" title="Git 基础教程：原理、常见操作与企业实践规范"><img class="cover" src="/img/p23.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Git 基础教程：原理、常见操作与企业实践规范</div></div><div class="info-2"><div class="info-item-1">Git 工作原理（三区域+对象模型）、常见命令速查、Git Flow 与 GitHub Flow 分支策略，以及企业中 commit message 规范、分支命名、PR 审查和 reflog 误操作恢复的完整实践指南。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/Git%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B-%E5%8E%9F%E7%90%86%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BC%81%E4%B8%9A%E5%AE%9E%E8%B7%B5/" title="Git 基础教程：原理、常见操作与企业实践规范"><img class="cover" src="/img/p23.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-05</div><div class="info-item-2">Git 基础教程：原理、常见操作与企业实践规范</div></div><div class="info-2"><div class="info-item-1">Git 工作原理（三区域+对象模型）、常见命令速查、Git Flow 与 GitHub Flow 分支策略，以及企业中 commit message 规范、分支命名、PR 审查和 reflog 误操作恢复的完整实践指南。</div></div></div></a><a class="pagination-related" href="/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE/" title="终端里的 Git：git-delta + lazygit + gh"><img class="cover" src="/img/p19.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">终端里的 Git：git-delta + lazygit + gh</div></div><div class="info-2"><div class="info-item-1">用 git-delta 给 diff 加语法高亮，用 lazygit 在 TUI 界面里完成 stage/commit/rebase，用 gh 在终端里操作 GitHub PR 和 Issue。三个工具各解决一块摩擦，装完即用。</div></div></div></a><a class="pagination-related" href="/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90/" title="Mac 终端 CLI 工具推荐：那些让命令行效率翻倍的家伙"><img class="cover" src="/img/p05b.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-06-28</div><div class="info-item-2">Mac 终端 CLI 工具推荐：那些让命令行效率翻倍的家伙</div></div><div class="info-2"><div class="info-item-1">系统梳理 Mac 终端完整工具链：从终端模拟器 kitty、Shell 框架 Zim，到 fzf、ripgrep、lazygit、LazyVim 等核心工具，聚焦每个工具的核心价值。</div></div></div></a><a class="pagination-related" href="/fastfetch-pokemon-colorscripts-%E7%BB%88%E7%AB%AF%E5%A4%96%E8%A7%82/" title="终端启动界面：fastfetch + pokemon-colorscripts"><img class="cover" src="/img/p20.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">终端启动界面：fastfetch + pokemon-colorscripts</div></div><div class="info-2"><div class="info-item-1">用 fastfetch 替换 neofetch，在终端显示系统信息和硬件状态；配合 pokemon-colorscripts 在每次打开终端时随机显示一只像素宝可梦。两个工具纯装饰向，安装简单，启动快。</div></div></div></a><a class="pagination-related" href="/atuin-zoxide-%E7%BB%88%E7%AB%AF%E5%8E%86%E5%8F%B2%E4%B8%8E%E7%9B%AE%E5%BD%95%E8%B7%B3%E8%BD%AC/" title="Shell 历史与目录跳转的现代替代：atuin + zoxide"><img class="cover" src="/img/p05.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-02</div><div class="info-item-2">Shell 历史与目录跳转的现代替代：atuin + zoxide</div></div><div class="info-2"><div class="info-item-1">用 atuin 替换 shell 历史记录，获得可过滤的 Ctrl+R 搜索界面；用 zoxide 替换 cd，输入路径片段直接跳转。两个工具安装简单、收益立竿见影。</div></div></div></a><a class="pagination-related" href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/" title="Linux 服务器问题排查：端口、进程、日志常用命令速查"><img class="cover" src="/img/p22.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">Linux 服务器问题排查：端口、进程、日志常用命令速查</div></div><div class="info-2"><div class="info-item-1">Linux 服务器问题排查常用命令速查：ss/lsof 查端口占用，ps/top 看进程状态，systemctl/journalctl 管理服务和查日志，curl/dig 测网络连通，df/du/free 看磁盘内存，附完整排查流程。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">25</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">47</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#worktree-%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%EF%BC%9A%E4%B8%80%E4%B8%AA%E4%BB%93%E5%BA%93%EF%BC%8C%E5%A4%9A%E4%B8%AA%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95"><span class="toc-number">1.</span> <span class="toc-text">worktree 的工作原理：一个仓库，多个工作目录</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#git-worktree-%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C%E5%9B%9B%E4%BB%B6%E5%A5%97%EF%BC%9Aadd-list-remove-prune"><span class="toc-number">2.</span> <span class="toc-text">git worktree 基本操作四件套：add &#x2F; list &#x2F; remove &#x2F; prune</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#add%EF%BC%9A%E5%88%9B%E5%BB%BA%E5%B7%A5%E4%BD%9C%E5%8C%BA"><span class="toc-number">2.1.</span> <span class="toc-text">add：创建工作区</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#list%EF%BC%9A%E6%9F%A5%E7%9C%8B%E6%89%80%E6%9C%89%E5%B7%A5%E4%BD%9C%E5%8C%BA"><span class="toc-number">2.2.</span> <span class="toc-text">list：查看所有工作区</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#remove%EF%BC%9A%E5%88%A0%E9%99%A4%E5%B7%A5%E4%BD%9C%E5%8C%BA"><span class="toc-number">2.3.</span> <span class="toc-text">remove：删除工作区</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#prune%EF%BC%9A%E6%B8%85%E7%90%86%E5%A4%B1%E6%95%88%E8%AE%B0%E5%BD%95"><span class="toc-number">2.4.</span> <span class="toc-text">prune：清理失效记录</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9C%BA%E6%99%AF%E4%B8%80%EF%BC%9Ahotfix-%E4%B8%8D%E6%89%93%E6%96%AD%E6%89%8B%E5%A4%B4%E7%9A%84-feature"><span class="toc-number">3.</span> <span class="toc-text">场景一：hotfix 不打断手头的 feature</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9C%BA%E6%99%AF%E4%BA%8C%EF%BC%9A%E5%B9%B6%E8%A1%8C-code-review-%E4%B8%8E%E9%95%BF%E6%97%B6%E9%97%B4%E4%BB%BB%E5%8A%A1"><span class="toc-number">4.</span> <span class="toc-text">场景二：并行 code review 与长时间任务</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%9B%E9%98%B6%E6%93%8D%E4%BD%9C%EF%BC%9Amove-lock-repair"><span class="toc-number">5.</span> <span class="toc-text">进阶操作：move &#x2F; lock &#x2F; repair</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#worktree-%E8%B8%A9%E5%9D%91%E6%B8%85%E5%8D%95%EF%BC%9A%E4%BE%9D%E8%B5%96%E4%B8%8D%E5%85%B1%E4%BA%AB%E3%80%81submodule-%E4%B8%8E-IDE"><span class="toc-number">6.</span> <span class="toc-text">worktree 踩坑清单：依赖不共享、submodule 与 IDE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#worktree-%E8%BF%98%E6%98%AF%E5%86%8D-clone-%E4%B8%80%E4%BB%BD%EF%BC%9F"><span class="toc-number">7.</span> <span class="toc-text">worktree 还是再 clone 一份？</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/" title="git worktree 教程：多工作区并行开发，告别 stash 切分支"><img src="/img/p24.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="git worktree 教程：多工作区并行开发，告别 stash 切分支"/></a><div class="content"><a class="title" href="/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/" title="git worktree 教程：多工作区并行开发，告别 stash 切分支">git worktree 教程：多工作区并行开发，告别 stash 切分支</a><time datetime="2026-07-06T02:00:00.000Z" title="发表于 2026-07-06 10:00:00">2026-07-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Git%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B-%E5%8E%9F%E7%90%86%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BC%81%E4%B8%9A%E5%AE%9E%E8%B7%B5/" title="Git 基础教程：原理、常见操作与企业实践规范"><img src="/img/p23.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Git 基础教程：原理、常见操作与企业实践规范"/></a><div class="content"><a class="title" href="/Git%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B-%E5%8E%9F%E7%90%86%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BC%81%E4%B8%9A%E5%AE%9E%E8%B7%B5/" title="Git 基础教程：原理、常见操作与企业实践规范">Git 基础教程：原理、常见操作与企业实践规范</a><time datetime="2026-07-05T02:00:00.000Z" title="发表于 2026-07-05 10:00:00">2026-07-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/" title="Linux 服务器问题排查：端口、进程、日志常用命令速查"><img src="/img/p22.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Linux 服务器问题排查：端口、进程、日志常用命令速查"/></a><div class="content"><a class="title" href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/" title="Linux 服务器问题排查：端口、进程、日志常用命令速查">Linux 服务器问题排查：端口、进程、日志常用命令速查</a><time datetime="2026-07-04T02:00:00.000Z" title="发表于 2026-07-04 10:00:00">2026-07-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/neovim-lazyvim-%E7%BB%88%E7%AB%AF%E7%BC%96%E8%BE%91%E5%99%A8/" title="从零开始用 Neovim：LazyVim 让配置不再是障碍"><img src="/img/p21.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从零开始用 Neovim：LazyVim 让配置不再是障碍"/></a><div class="content"><a class="title" href="/neovim-lazyvim-%E7%BB%88%E7%AB%AF%E7%BC%96%E8%BE%91%E5%99%A8/" title="从零开始用 Neovim：LazyVim 让配置不再是障碍">从零开始用 Neovim：LazyVim 让配置不再是障碍</a><time datetime="2026-07-03T10:00:00.000Z" title="发表于 2026-07-03 18:00:00">2026-07-03</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/fastfetch-pokemon-colorscripts-%E7%BB%88%E7%AB%AF%E5%A4%96%E8%A7%82/" title="终端启动界面：fastfetch + pokemon-colorscripts"><img src="/img/p20.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="终端启动界面：fastfetch + pokemon-colorscripts"/></a><div class="content"><a class="title" href="/fastfetch-pokemon-colorscripts-%E7%BB%88%E7%AB%AF%E5%A4%96%E8%A7%82/" title="终端启动界面：fastfetch + pokemon-colorscripts">终端启动界面：fastfetch + pokemon-colorscripts</a><time datetime="2026-07-03T08:00:00.000Z" title="发表于 2026-07-03 16:00:00">2026-07-03</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script>function injectCategoryDesc(){var el=document.querySelector('.category-lists');if(!el||el.nextElementSibling&&el.nextElementSibling.id==='cat-desc')return;var desc=document.createElement('div');desc.id='cat-desc';desc.style.cssText='margin-top:28px;padding:20px 24px;background:rgba(255,255,255,0.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.45);border-radius:14px;';desc.innerHTML='<h3 style="margin:0 0 14px;font-size:.95rem;font-weight:700;color:#3b3b5c;">各分类说明</h3><table style="width:100%;border-collapse:collapse;font-size:.875rem;"><tbody><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">tools</td><td style="padding:8px 12px;color:#5a5a7a;">工具链系列，覆盖终端、Shell、搜索、文件管理、Git TUI、编辑器等；也包含 tldr、git tag 等命令速查</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">golang</td><td style="padding:8px 12px;color:#5a5a7a;">Go 后端实战：常见业务问题解决方案实现</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">git</td><td style="padding:8px 12px;color:#5a5a7a;">Git 常见使用方式以及操作技巧</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">ai</td><td style="padding:8px 12px;color:#5a5a7a;"> ai 相关使用和分享</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">cursor</td><td style="padding:8px 12px;color:#5a5a7a;">Cursor 编辑器：使用场景和难点</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">Hexo</td><td style="padding:8px 12px;color:#5a5a7a;">hexo 搭建博客的常见配置技巧</td></tr><tr><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">problem</td><td style="padding:8px 12px;color:#5a5a7a;">记录各种问题报错的排查过程</td></tr></tbody></table>';el.after(desc);}document.addEventListener('DOMContentLoaded',injectCategoryDesc);document.addEventListener('pjax:complete',injectCategoryDesc);</script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>
