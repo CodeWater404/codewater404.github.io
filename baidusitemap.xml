@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/</loc>
+    <lastmod>2026-07-07</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.codewater.top/Claude%E5%85%A8%E9%9D%A2%E6%95%99%E7%A8%8B-%E6%A8%A1%E5%9E%8B%E6%A6%82%E5%BF%B5%E4%B8%8EAPI%E5%AE%9E%E6%88%98/</loc>
+    <lastmod>2026-07-07</lastmod>
+  </url>
+  <url>
     <loc>https://blog.codewater.top/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/</loc>
     <lastmod>2026-07-06</lastmod>
   </url>
@@ -51,10 +59,6 @@
   <url>
     <loc>https://blog.codewater.top/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90/</loc>
     <lastmod>2026-06-28</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/</loc>
-    <lastmod>2025-06-27</lastmod>
   </url>
   <url>
     <loc>https://blog.codewater.top/how-to-choose-a-desktop-configuration/</loc>

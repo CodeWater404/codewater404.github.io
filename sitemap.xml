@@ -2,6 +2,24 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/</loc>
+    
+    <lastmod>2026-07-07</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/Claude%E5%85%A8%E9%9D%A2%E6%95%99%E7%A8%8B-%E6%A8%A1%E5%9E%8B%E6%A6%82%E5%BF%B5%E4%B8%8EAPI%E5%AE%9E%E6%88%98/</loc>
+    
+    <lastmod>2026-07-07</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://blog.codewater.top/git-worktree%E5%A4%9A%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91/</loc>
     
     <lastmod>2026-07-06</lastmod>
@@ -119,15 +137,6 @@
   </url>
   
   <url>
-    <loc>https://blog.codewater.top/Go%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0Google%E4%B8%80%E9%94%AE%E7%99%BB%E5%BD%95/</loc>
-    
-    <lastmod>2025-06-27</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://blog.codewater.top/how-to-choose-a-desktop-configuration/</loc>
     
     <lastmod>2025-05-28</lastmod>
@@ -227,15 +236,6 @@
   </url>
   
   <url>
-    <loc>https://blog.codewater.top/resources/index.html</loc>
-    
-    <lastmod>2024-02-16</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://blog.codewater.top/categories/index.html</loc>
     
     <lastmod>2024-02-16</lastmod>
@@ -246,6 +246,15 @@
   
   <url>
     <loc>https://blog.codewater.top/tags/index.html</loc>
+    
+    <lastmod>2024-02-16</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/resources/index.html</loc>
     
     <lastmod>2024-02-16</lastmod>
     
@@ -272,14 +281,14 @@
 
   
   <url>
-    <loc>https://blog.codewater.top/tags/submodule/</loc>
+    <loc>https://blog.codewater.top/tags/log/</loc>
     <lastmod>2026-07-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
-    <loc>https://blog.codewater.top/tags/log/</loc>
+    <loc>https://blog.codewater.top/tags/submodule/</loc>
     <lastmod>2026-07-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -294,6 +303,48 @@
   
   <url>
     <loc>https://blog.codewater.top/tags/history/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/Claude/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/Anthropic/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/AI/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/LLM/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/API/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/Agent/</loc>
     <lastmod>2026-07-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -370,6 +421,20 @@
   </url>
   
   <url>
+    <loc>https://blog.codewater.top/tags/atuin/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/zoxide/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
     <loc>https://blog.codewater.top/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/</loc>
     <lastmod>2026-07-06</lastmod>
     <changefreq>weekly</changefreq>
@@ -392,20 +457,6 @@
   
   <url>
     <loc>https://blog.codewater.top/tags/zsh/</loc>
-    <lastmod>2026-07-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://blog.codewater.top/tags/atuin/</loc>
-    <lastmod>2026-07-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://blog.codewater.top/tags/zoxide/</loc>
     <lastmod>2026-07-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -503,13 +554,6 @@
   </url>
   
   <url>
-    <loc>https://blog.codewater.top/tags/desktop/</loc>
-    <lastmod>2026-07-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://blog.codewater.top/tags/Linux/</loc>
     <lastmod>2026-07-06</lastmod>
     <changefreq>weekly</changefreq>
@@ -553,6 +597,13 @@
   
   <url>
     <loc>https://blog.codewater.top/tags/jq/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/tags/desktop/</loc>
     <lastmod>2026-07-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -604,6 +655,13 @@
   
   <url>
     <loc>https://blog.codewater.top/categories/git/</loc>
+    <lastmod>2026-07-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.codewater.top/categories/tutorial/</loc>
     <lastmod>2026-07-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
