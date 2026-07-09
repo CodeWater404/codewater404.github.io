@@ -4,6 +4,72 @@
   
     
     <entry>
+      <title>Linux 常见命令与工具地图(备忘录)</title>
+      <link href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/"/>
+      <url>/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/</url>
+      
+        <content type="html"><![CDATA[<p>两类场景总在提醒我该整理一份命令清单。一类是日常写代码，某个命令用得不够频繁，参数记不住，每次都要重新搜索引擎查一遍。</p><p>另一类更麻烦：公司的测试服务器系统版本老，很多现代工具装不上，只能用回那些”老式”命令。这些命令恰恰因为平时用不到，用法早就生疏了，真要用的时候翻半天才想起来参数怎么写。</p><p>这篇是一份分类地图，把常用命令和工具按场景归类，每条一两句话说清楚它解决什么问题、默认行为是什么。已经写过详细教程的条目直接跳转过去看用法，还没写的先记住名字，用到时候自己查 <code>man</code> 或 <code>--help</code>。</p><span id="more"></span><h2 id="文件与目录：从「东西在哪」查起"><a href="#文件与目录：从「东西在哪」查起" class="headerlink" title="文件与目录：从「东西在哪」查起"></a>文件与目录：从「东西在哪」查起</h2><ul><li><strong>ls</strong>：列出目录内容，默认不显示隐藏文件（<code>.</code> 开头），常配 <code>-la</code> 看详情和隐藏项</li><li><strong>find</strong>：按名称、类型、时间、大小等条件递归查找文件，语法历史包袱重，选项多但记不住</li><li><strong>fd</strong>：<code>find</code> 的现代替代，默认按名称模糊匹配、自动跳过 <code>.gitignore</code> 里的文件，语法更接近自然语言</li><li><strong>tree</strong>：以树状结构展示目录层级，排查项目结构时比 <code>ls -R</code> 直观</li><li><strong>du</strong>：统计文件&#x2F;目录占用的磁盘空间，<code>-h</code> 转成人类可读单位，<code>-s</code> 只看汇总不展开子目录</li><li><strong>df</strong>：查看文件系统整体的磁盘使用率，和 <code>du</code>（查某个目录&#x2F;文件多大）不是一回事，<code>df</code> 是”盘还剩多少”</li><li><strong>file</strong>：判断文件的真实类型，不依赖扩展名，遇到没有后缀的文件时有用</li><li><strong>stat</strong>：查看文件的详细元信息（大小、权限、三个时间戳），比 <code>ls -l</code> 信息更全</li></ul><blockquote><p>终端里用图形化三栏界面管理文件，比裸敲 <code>ls</code>&#x2F;<code>cd</code> 更高效，见 <a href="/yazi%E7%BB%88%E7%AB%AF%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E5%99%A8">yazi：终端里的三栏文件管理器</a>。</p></blockquote><h2 id="文本处理与搜索：抓文本、转格式、过滤结果"><a href="#文本处理与搜索：抓文本、转格式、过滤结果" class="headerlink" title="文本处理与搜索：抓文本、转格式、过滤结果"></a>文本处理与搜索：抓文本、转格式、过滤结果</h2><ul><li><strong>grep</strong>：按正则匹配文本行，默认不递归，只在当前目录搜要加 <code>-r</code></li><li><strong>ripgrep（rg）</strong>：<code>grep</code> 的现代替代，默认递归搜索、自动遵循 <code>.gitignore</code>、速度快一个数量级，是本博客文章里推荐搜索时的首选</li><li><strong>sed</strong>：流编辑器，按行对文本做替换、删除、插入，最常见用法是 <code>sed &#39;s/旧/新/g&#39;</code> 批量替换</li><li><strong>awk</strong>：按列处理结构化文本（日志、CSV），比 <code>sed</code> 更适合”取第几列、按条件过滤”这类场景</li><li><strong>cut &#x2F; sort &#x2F; uniq</strong>：三个小工具常一起用——<code>cut</code> 截取列，<code>sort</code> 排序，<code>uniq -c</code> 统计重复次数，组合起来能替代不少 <code>awk</code> 脚本</li><li><strong>wc</strong>：统计行数（<code>-l</code>）、单词数、字节数，比写 <code>awk</code> 判断行数快</li><li><strong>jq</strong>：命令行的 JSON 处理器，从 API 响应或日志里提取字段、过滤、重新格式化</li></ul><blockquote><p><code>grep</code> 换成 <code>ripgrep</code>，配合 <code>fzf</code> 模糊筛选、<code>fd</code> 找文件，是效率提升最直接的一步，完整用法见 <a href="/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd">终端搜索三件套：fzf + ripgrep + fd，以及 jq</a>。</p></blockquote><h2 id="进程与系统资源：谁在跑、吃了多少"><a href="#进程与系统资源：谁在跑、吃了多少" class="headerlink" title="进程与系统资源：谁在跑、吃了多少"></a>进程与系统资源：谁在跑、吃了多少</h2><ul><li><strong>ps</strong>：查看当前进程快照，<code>ps aux</code> 是最常用的组合，看全部用户的所有进程</li><li><strong>top &#x2F; htop</strong>：实时监控进程和资源占用，<code>htop</code> 是 <code>top</code> 的现代替代，界面更直观、支持鼠标操作和树状显示父子进程</li><li><strong>kill &#x2F; pkill</strong>：给进程发信号，默认发 <code>SIGTERM</code>（15，请求优雅退出），<code>-9</code> 是 <code>SIGKILL</code>（强制杀死，进程来不及清理资源）</li><li><strong>nice &#x2F; renice</strong>：调整进程的 CPU 调度优先级，数值越低优先级越高</li><li><strong>systemctl</strong>：管理 systemd 服务的启动、停止、开机自启和状态查看，是现代 Linux 发行版的服务管理标准</li><li><strong>journalctl</strong>：查看 systemd 管理的日志，<code>-u 服务名</code> 只看某个服务、<code>-f</code> 实时跟踪，取代了传统的 <code>/var/log/</code> 逐个文件翻</li></ul><blockquote><p>端口、进程、日志三类问题的完整排查流程（含 <code>ss</code>、<code>lsof</code>），见 <a href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4">Linux 服务器问题排查：端口、进程、日志常用命令速查</a>。</p></blockquote><h2 id="网络排查：连不上、超时、端口占用先查这些"><a href="#网络排查：连不上、超时、端口占用先查这些" class="headerlink" title="网络排查：连不上、超时、端口占用先查这些"></a>网络排查：连不上、超时、端口占用先查这些</h2><ul><li><strong>curl</strong>：发起 HTTP 请求、测试接口连通性，调试 API 时最常用的工具，不带参数默认发 GET</li><li><strong>wget</strong>：下载文件，相比 <code>curl</code> 更适合直接保存到本地、支持断点续传</li><li><strong>ss</strong>：查看 socket 连接状态（监听端口、已建立连接），是 <code>netstat</code> 的现代替代，速度更快、输出更简洁</li><li><strong>lsof</strong>：列出进程打开的文件（Linux 下”一切皆文件”，网络连接也算），常用来反查”哪个进程占用了这个端口”</li><li><strong>ping</strong>：测试到目标主机的网络连通性和延迟，基于 ICMP，某些网络环境会屏蔽</li><li><strong>traceroute</strong>：追踪数据包到目标主机经过的每一跳路由，定位网络中间环节的问题</li><li><strong>dig &#x2F; nslookup</strong>：查询 DNS 解析结果，<code>dig</code> 输出更详细，排查域名解析问题的首选</li></ul><blockquote><p><code>ss</code> 和 <code>lsof</code> 的实际排查场景（比如揪出占用 8080 端口的进程），同样在 <a href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4">Linux 服务器问题排查</a> 里有完整示例。</p></blockquote><h2 id="权限与用户管理：谁能做什么"><a href="#权限与用户管理：谁能做什么" class="headerlink" title="权限与用户管理：谁能做什么"></a>权限与用户管理：谁能做什么</h2><ul><li><strong>chmod</strong>：修改文件&#x2F;目录的读写执行权限，数字模式（<code>755</code>）和符号模式（<code>u+x</code>）两种写法</li><li><strong>chown</strong>：修改文件的所有者和所属组，格式是 <code>chown 用户:组 文件</code></li><li><strong>sudo</strong>：以其他用户（默认 root）身份执行单条命令，比直接切到 root 更安全，操作有日志可查</li><li><strong>su</strong>：切换到另一个用户的完整 shell 会话，<code>su -</code> 会同时加载目标用户的环境变量</li><li><strong>useradd &#x2F; usermod</strong>：创建用户、修改用户属性（所属组、家目录、shell），发行版不同细节略有差异</li><li><strong>id &#x2F; whoami</strong>：查看当前用户的身份信息，<code>id</code> 显示 UID&#x2F;GID 和所属组，<code>whoami</code> 只输出用户名</li></ul><h2 id="包管理与服务安装：装什么、从哪装"><a href="#包管理与服务安装：装什么、从哪装" class="headerlink" title="包管理与服务安装：装什么、从哪装"></a>包管理与服务安装：装什么、从哪装</h2><ul><li><strong>apt</strong>：Debian &#x2F; Ubuntu 系发行版的包管理器，<code>apt update</code> 刷新源、<code>apt install</code> 装包</li><li><strong>yum &#x2F; dnf</strong>：RHEL &#x2F; CentOS &#x2F; Fedora 系的包管理器，<code>dnf</code> 是 <code>yum</code> 的继任者，新版本发行版默认用 <code>dnf</code></li><li><strong>brew</strong>：macOS（以及部分 Linux 发行版）的包管理器，不需要 sudo，装在用户目录下</li><li><strong>systemctl enable</strong>：把服务设为开机自启，和上面”进程与系统资源”里的 <code>systemctl status</code> 是同一个命令的不同用法——一个管”装完之后要不要自启”，一个管”现在是什么状态”</li></ul><h2 id="压缩与传输：打包、发送、同步"><a href="#压缩与传输：打包、发送、同步" class="headerlink" title="压缩与传输：打包、发送、同步"></a>压缩与传输：打包、发送、同步</h2><ul><li><strong>tar</strong>：打包（不压缩）或打包并压缩（配合 <code>-z</code>&#x2F;<code>-j</code> 调用 gzip&#x2F;bzip2），Linux 下最常见的归档格式是 <code>.tar.gz</code></li><li><strong>zip &#x2F; unzip</strong>：处理 <code>.zip</code> 格式，跨平台兼容性比 <code>tar</code> 好，Windows 用户对接时常用这个</li><li><strong>scp</strong>：基于 SSH 的文件拷贝，语法接近 <code>cp</code>，适合偶尔传一两个文件</li><li><strong>rsync</strong>：增量同步工具，只传输变化的部分，同步大目录或做定期备份时比 <code>scp</code> 快得多，很多云盘同步工具底层就是它</li></ul><h2 id="Git-命令行工具链"><a href="#Git-命令行工具链" class="headerlink" title="Git 命令行工具链"></a>Git 命令行工具链</h2><ul><li><strong>git-delta &#x2F; lazygit &#x2F; gh</strong>：分别是更好看的 diff 输出、终端图形化 Git 客户端、GitHub 官方 CLI，三者组合能覆盖日常 Git 操作的大部分场景，见 <a href="/git-delta-lazygit-gh-%E7%BB%88%E7%AB%AFGit%E5%B7%A5%E5%85%B7%E9%93%BE">终端里的 Git：git-delta + lazygit + gh</a></li><li><strong>git tag</strong>：给某个提交打标签，常用于标记版本发布节点，完整命令和使用场景见 <a href="/git-tag%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%E4%B8%8E%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF">git tag 常用命令与使用场景</a></li></ul><h2 id="Shell-环境与效率工具"><a href="#Shell-环境与效率工具" class="headerlink" title="Shell 环境与效率工具"></a>Shell 环境与效率工具</h2><p>这一类不是单个命令，而是整套终端使用体验的优化，各自有完整教程：</p><ul><li><strong>atuin + zoxide</strong>：替代默认的 shell 历史（<code>history</code>）和目录跳转（<code>cd</code>），前者把历史记录存进数据库支持模糊搜索，后者记住常去的目录、输入片段就能跳转，见 <a href="/atuin-zoxide-%E7%BB%88%E7%AB%AF%E5%8E%86%E5%8F%B2%E4%B8%8E%E7%9B%AE%E5%BD%95%E8%B7%B3%E8%BD%AC">Shell 历史与目录跳转的现代替代：atuin + zoxide</a></li><li><strong>kitty + Zim</strong>：终端模拟器和 Zsh 配置框架的组合，解决”终端本身好不好用”和”命令行编辑体验”两个问题，见 <a href="/Mac%E7%BB%88%E7%AB%AF%E5%9F%BA%E7%A1%80-kitty%E5%92%8CZim">Mac 终端基础配置：kitty + Zim</a></li><li><strong>fastfetch + pokemon-colorscripts</strong>：终端启动界面的系统信息展示和装饰，纯提升使用体验，见 <a href="/fastfetch-pokemon-colorscripts-%E7%BB%88%E7%AB%AF%E5%A4%96%E8%A7%82">终端启动界面：fastfetch + pokemon-colorscripts</a></li><li><strong>Neovim + LazyVim</strong>：终端里的代码编辑器，LazyVim 是开箱即用的配置发行版，免去从零攒 Neovim 配置的过程，见 <a href="/neovim-lazyvim-%E7%BB%88%E7%AB%AF%E7%BC%96%E8%BE%91%E5%99%A8">从零开始用 Neovim：LazyVim 让配置不再是障碍</a></li><li><strong>CLI 里集成 AI</strong>：把大模型接进命令行工作流，直接在终端里提问、生成命令，见 <a href="/cli%E4%B8%AD%E9%9B%86%E6%88%90ai-%E4%BB%A5deepseek%E4%B8%BA%E4%BE%8B">cli 中集成 ai，以 deepseek 为例</a></li><li>更多单点工具（bat、eza 等替代品）的推荐清单，见 <a href="/Mac%E7%BB%88%E7%AB%AFCLI%E5%B7%A5%E5%85%B7%E6%8E%A8%E8%8D%90">Mac 终端 CLI 工具推荐：那些让命令行效率翻倍的家伙</a></li></ul><h2 id="这份地图会持续更新"><a href="#这份地图会持续更新" class="headerlink" title="这份地图会持续更新"></a>这份地图会持续更新</h2><p>权限管理、包管理、压缩传输这几类目前还只有条目没有详细文章，接下来会陆续把 <code>chmod</code>&#x2F;<code>chown</code> 的实际排坑场景、<code>rsync</code> 的增量同步参数、<code>tar</code> 的常见坑逐个写成独立教程，写完就回来把对应条目换成链接。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> tools </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> CLI </tag>
+            
+            <tag> Linux </tag>
+            
+            <tag> 命令行 </tag>
+            
+            <tag> 终端 </tag>
+            
+            <tag> 效率工具 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>给 Claude Code 接入外部记忆系统：新会话不再失忆</title>
+      <link href="/%E7%BB%99Claude-Code%E6%8E%A5%E5%85%A5%E5%A4%96%E9%83%A8%E8%AE%B0%E5%BF%86%E7%B3%BB%E7%BB%9F/"/>
+      <url>/%E7%BB%99Claude-Code%E6%8E%A5%E5%85%A5%E5%A4%96%E9%83%A8%E8%AE%B0%E5%BF%86%E7%B3%BB%E7%BB%9F/</url>
+      
+        <content type="html"><![CDATA[<p>用 Claude Code 一段时间后，你大概率遇到过这个循环：昨天的会话里它已经摸清了项目架构、知道哪个模块有坑、记住了你的编码偏好，今天新开一个会话——全忘了。你只能把项目背景再讲一遍，或者眼睁睁看它把昨天踩过的坑再踩一次。</p><p>CLAUDE.md 能缓解一部分，但它本质上是一份静态规则文件，解决的是「规矩」问题，解决不了「积累」问题。真正的解法是给 Claude Code 接一个外部记忆系统：它自己把重要的事实存进去，下次会话自己检索出来。记忆数据可以是你完全自己保管的本地文件，也可以放云端跨设备同步。</p><span id="more"></span><p>这是 Claude 系列的第五篇。如果你还不知道 MCP 是什么，建议先看<a href="/%E8%87%AA%E5%BB%BAMCP-server%E6%8E%A5%E5%85%A5Claude">自建一个 MCP Server 接入 Claude</a>——本文的所有方案都构建在 MCP 之上。</p><h2 id="Claude-Code-自带的记忆，只能记住「规则」"><a href="#Claude-Code-自带的记忆，只能记住「规则」" class="headerlink" title="Claude Code 自带的记忆，只能记住「规则」"></a>Claude Code 自带的记忆，只能记住「规则」</h2><p>先盘点原生能力的边界，免得重复造轮子。Claude Code 内置三个记忆入口：</p><ul><li><strong>CLAUDE.md</strong>：项目根目录或 <code>~/.claude/</code> 下的规则文件，每次会话自动加载，适合放编码规范、构建命令这类固定约定</li><li><strong><code>#</code> 快捷记忆</strong>：对话中输入以 <code>#</code> 开头的消息，Claude Code 会问你要写进哪个 CLAUDE.md，适合随手沉淀一条规则</li><li><strong><code>/memory</code> 命令</strong>：直接打开记忆文件编辑</li></ul><p>这套机制有三个绕不过去的局限：</p><ol><li><strong>不会自己积累</strong>。会话中发现的架构细节、踩坑记录，除非你手动 <code>#</code> 一下，否则会话结束就丢了。</li><li><strong>全量加载</strong>。CLAUDE.md 的每一行都会进入每次会话的 context，记得越多，每次对话的开销越大，无关内容还会稀释注意力。</li><li><strong>不可检索</strong>。它是一整块文本，没法按「当前任务相关性」只取需要的部分。</li></ol><p>外部记忆系统正好补上这三块：自动写入、按需检索、只把相关记忆注入 context。</p><h2 id="外部记忆系统的工作原理：MCP-tools-使用协议"><a href="#外部记忆系统的工作原理：MCP-tools-使用协议" class="headerlink" title="外部记忆系统的工作原理：MCP tools + 使用协议"></a>外部记忆系统的工作原理：MCP tools + 使用协议</h2><p>所谓「记忆系统」，拆开看就是两件事：</p><ol><li><strong>一个 MCP server</strong>，暴露一组读写记忆的 tools（存储后端可以是本地文件、向量数据库或云端服务）</li><li><strong>一份使用协议</strong>，写在 CLAUDE.md 里，告诉 Claude 什么时候该查记忆、什么时候该存记忆</li></ol><p>很多人接完 MCP server 发现「Claude 根本不主动用」，缺的就是第二件事——MCP 只提供工具，不提供触发时机。两件事都做完，工作流是这样的：</p><pre><code class="highlight mermaid">sequenceDiagram    participant U as 你    participant C as Claude Code    participant M as 记忆 server（MCP）    participant S as 存储（本地文件/向量库/云端）    U-&gt;&gt;C: 新会话：继续优化订单服务    C-&gt;&gt;M: search_nodes(&quot;订单服务&quot;)    M-&gt;&gt;S: 查询    S--&gt;&gt;M: 匹配的记忆    M--&gt;&gt;C: 订单服务用 Redis 做幂等去重，上周踩过超时坑    C-&gt;&gt;U: 带着上下文直接开工    Note over C,M: 会话中发现新事实    C-&gt;&gt;M: add_observations(&quot;Redis 超时须设 500ms 上限&quot;)    M-&gt;&gt;S: 写入，供下次会话使用</code></pre><p>下面按「部署成本从低到高、数据控制权从本地到云端」介绍三条路线。</p><h2 id="方案一：官方-memory-server：五分钟拥有本地知识图谱"><a href="#方案一：官方-memory-server：五分钟拥有本地知识图谱" class="headerlink" title="方案一：官方 memory server：五分钟拥有本地知识图谱"></a><a href="https://github.com/modelcontextprotocol/servers/tree/main/src/memory">方案一：官方 memory server</a>：五分钟拥有本地知识图谱</h2><p><code>@modelcontextprotocol/server-memory</code> 是 MCP 官方维护的参考实现，把记忆存成本地的一个 JSONL 文件——数据完全自己保管，想备份就丢进 git，想销毁就删文件。零外部依赖，最适合第一次接记忆系统。</p><p>一条命令注册到当前项目：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">claude mcp add --scope project memory \</span><br><span class="line">  -e MEMORY_FILE_PATH=./.claude/memory.jsonl \</span><br><span class="line">  -- npx -y @modelcontextprotocol/server-memory</span><br><span class="line"><span class="comment">#   --scope project：配置写入项目根目录的 .mcp.json，随仓库共享给团队</span></span><br><span class="line"><span class="comment">#   -e：environment，给 server 进程注入环境变量</span></span><br><span class="line"><span class="comment">#     MEMORY_FILE_PATH 是记忆文件路径；不指定会存到 npx 缓存目录，包升级后就丢了，务必显式指定</span></span><br><span class="line"><span class="comment">#   --：分隔符，后面是启动 server 的完整命令</span></span><br></pre></td></tr></table></figure><p>注册后运行 <code>claude mcp list</code> 确认状态为 ✓ connected，或在会话里输入 <code>/mcp</code> 查看。</p><h3 id="它的记忆长什么样：实体、关系、观察"><a href="#它的记忆长什么样：实体、关系、观察" class="headerlink" title="它的记忆长什么样：实体、关系、观察"></a>它的记忆长什么样：实体、关系、观察</h3><p>这个 server 的数据模型是知识图谱，三种元素：</p><ul><li><strong>entity（实体）</strong>：记忆的主体，比如「订单服务」「Redis」</li><li><strong>relation（关系）</strong>：实体之间的连接，比如「订单服务 → 依赖 → Redis」</li><li><strong>observation（观察）</strong>：挂在实体上的具体事实，比如「Redis 只用 db0」</li></ul><p>对应到 <code>memory.jsonl</code> 里就是一行一条记录：</p><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;type&quot;</span><span class="punctuation">:</span><span class="string">&quot;entity&quot;</span><span class="punctuation">,</span><span class="attr">&quot;name&quot;</span><span class="punctuation">:</span><span class="string">&quot;订单服务&quot;</span><span class="punctuation">,</span><span class="attr">&quot;entityType&quot;</span><span class="punctuation">:</span><span class="string">&quot;service&quot;</span><span class="punctuation">,</span><span class="attr">&quot;observations&quot;</span><span class="punctuation">:</span><span class="punctuation">[</span><span class="string">&quot;Go 1.24 编写&quot;</span><span class="punctuation">,</span><span class="string">&quot;用 Redis 做幂等去重&quot;</span><span class="punctuation">]</span><span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;type&quot;</span><span class="punctuation">:</span><span class="string">&quot;relation&quot;</span><span class="punctuation">,</span><span class="attr">&quot;from&quot;</span><span class="punctuation">:</span><span class="string">&quot;订单服务&quot;</span><span class="punctuation">,</span><span class="attr">&quot;to&quot;</span><span class="punctuation">:</span><span class="string">&quot;Redis&quot;</span><span class="punctuation">,</span><span class="attr">&quot;relationType&quot;</span><span class="punctuation">:</span><span class="string">&quot;依赖&quot;</span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure><p>server 暴露 9 个 tools：<code>create_entities</code>、<code>create_relations</code>、<code>add_observations</code> 负责写入，<code>search_nodes</code>、<code>open_nodes</code>、<code>read_graph</code> 负责检索，另有三个 delete 类工具做清理。你不需要手动调用它们——写好下一节的协议后，Claude 会自己调。</p><h3 id="实测：跨会话记住一条约定"><a href="#实测：跨会话记住一条约定" class="headerlink" title="实测：跨会话记住一条约定"></a>实测：跨会话记住一条约定</h3><p>在会话 A 里说：</p><blockquote><p>记住：这个项目的 Redis 只用 db0，禁止依赖 keyspace notification。</p></blockquote><p>Claude 会调用 <code>create_entities</code> 把这条约定写进图谱（如果它只是口头答应没调工具，明确说「存进 memory」，或者先写好下一节的协议）。关掉会话，新开会话 B，问「我们项目 Redis 有什么使用限制？」——它先 <code>search_nodes(&quot;Redis&quot;)</code>，然后答出 db0 和 keyspace notification 两条限制。记忆文件就在 <code>.claude/memory.jsonl</code>，可以随时打开人工检查或修正。</p><p>还有一个顺手的决定要做：这个文件要不要提交进 git。提交，它就成了团队共享记忆，同事 clone 下来直接继承；不提交，就把 <code>.claude/memory.jsonl</code> 加进 <code>.gitignore</code>，记忆保持个人私有。两种都合理，但要主动选，别让它意外进了仓库。</p><h2 id="关键一步：在-CLAUDE-md-里写「记忆协议」"><a href="#关键一步：在-CLAUDE-md-里写「记忆协议」" class="headerlink" title="关键一步：在 CLAUDE.md 里写「记忆协议」"></a>关键一步：在 CLAUDE.md 里写「记忆协议」</h2><p>不管选哪个方案，这一步都不能省。在项目的 CLAUDE.md 里加一段：</p><figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">## 记忆协议</span></span><br><span class="line"></span><br><span class="line">会话开始处理任务前：</span><br><span class="line"><span class="bullet">1.</span> 先用 memory 的 search<span class="emphasis">_nodes 检索与当前任务相关的记忆</span></span><br><span class="line"><span class="emphasis">2. 用到了记忆就明确说「根据记忆：……」，方便我发现过期记忆并纠正</span></span><br><span class="line"><span class="emphasis"></span></span><br><span class="line"><span class="emphasis">工作过程中，遇到以下信息立即写入记忆：</span></span><br><span class="line"><span class="emphasis">- 架构决策及其原因</span></span><br><span class="line"><span class="emphasis">- 踩过的坑和最终的修复方式</span></span><br><span class="line"><span class="emphasis">- 我明确说「记住」的内容</span></span><br><span class="line"><span class="emphasis"></span></span><br><span class="line"><span class="emphasis">以下内容不要存：</span></span><br><span class="line"><span class="emphasis">- 代码本身能看出来的东西（目录结构、函数签名、依赖列表）</span></span><br><span class="line"><span class="emphasis">- 密钥、token、内部域名等敏感信息</span></span><br></pre></td></tr></table></figure><p>「不要存什么」和「要存什么」同样重要：代码能看出来的东西存进记忆只会制造过期副本，而敏感信息一旦进了记忆文件，就多了一个泄露面。</p><h2 id="方案二：mem0-云端：托管记忆，跨设备同步"><a href="#方案二：mem0-云端：托管记忆，跨设备同步" class="headerlink" title="方案二：mem0 云端：托管记忆，跨设备同步"></a><a href="https://mem0.ai/">方案二：mem0 云端</a>：托管记忆，跨设备同步</h2><p><a href="https://mem0.ai/">mem0</a> 是社区里使用最广的 LLM 记忆层之一，云端版本的优势是<strong>语义检索</strong>和<strong>零运维</strong>：记忆经过向量化，「Redis 使用限制」能检索到「缓存约定」这类字面不同但含义相关的记忆；公司电脑存的记忆，家里的电脑直接可用。</p><p>官方推荐通过 Claude Code 的 plugin 市场安装：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在 Claude Code 会话内执行</span></span><br><span class="line">/plugin marketplace add mem0ai/mem0</span><br><span class="line">/plugin install mem0@mem0-plugins</span><br></pre></td></tr></table></figure><p>然后到 <a href="https://app.mem0.ai/">mem0 控制台</a> 拿 API key，写进 shell 配置：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> MEM0_API_KEY=<span class="string">&quot;m0-你的key&quot;</span></span><br><span class="line"><span class="comment">#   mem0 的 API 密钥，plugin 和 MCP server 都从这个环境变量读取</span></span><br></pre></td></tr></table></figure><p>装完在会话里跑 <code>/mem0:onboard</code> 验证连接。plugin 版比纯 MCP 版多一层价值：自带 hooks，会在会话结束等时机<strong>自动捕获</strong>值得记住的内容，不完全依赖 CLAUDE.md 协议驱动。它提供 <code>add_memory</code>、<code>search_memories</code>、<code>get_memories</code>、<code>update_memory</code>、<code>delete_memory</code> 等 9 个 tools。</p><p>mem0 有免费额度，超出后按量付费，具体以<a href="https://mem0.ai/pricing">官网定价</a>为准。代价也明确：<strong>记忆内容存在别人的服务器上</strong>。如果你的记忆里会出现内部系统名称、架构细节，先确认这符合公司的数据政策。</p><h2 id="方案三：mem0-自托管-server：语义检索，记忆落在自己的机器上"><a href="#方案三：mem0-自托管-server：语义检索，记忆落在自己的机器上" class="headerlink" title="方案三：mem0 自托管 server：语义检索，记忆落在自己的机器上"></a><a href="https://docs.mem0.ai/open-source/overview">方案三：mem0 自托管 server</a>：语义检索，记忆落在自己的机器上</h2><p>想要 mem0 的语义检索，又要求记忆数据留在自己手里，用 mem0 开源的自托管 server：docker 起一套本地服务，包含 REST API（localhost:8888）、Web 管理面板（localhost:3000）和内置的 PostgreSQL + pgvector 向量存储，面板上能浏览每一条记忆、查请求日志、管理 API key。</p><blockquote><p>网上不少教程还在推荐 mem0 的另一个自托管项目 OpenMemory，它已经被官方标记为 sunset（停止维护），仓库 README 明确指引迁移到这套自托管 server，别照旧教程部署了。</p></blockquote><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mem0ai/mem0.git</span><br><span class="line"><span class="built_in">cd</span> mem0/server</span><br><span class="line">make up</span><br><span class="line"><span class="comment">#   docker compose 启动全部组件，随后访问 http://localhost:3000 走初始化向导</span></span><br><span class="line"><span class="comment">#   .env 里至少要配：一个 LLM key（OPENAI_API_KEY / ANTHROPIC_API_KEY / GOOGLE_API_KEY 三选一）</span></span><br><span class="line"><span class="comment">#   和 JWT_SECRET（用 openssl rand -base64 48 生成），细节以官方 setup 文档为准</span></span><br></pre></td></tr></table></figure><p>两个要点决定它适不适合你：</p><ol><li><strong>它没有现成的 MCP 端点</strong>，对外只有 REST API。接进 Claude Code 有两条路：找社区的 mem0 MCP 桥接项目，或者照<a href="/%E8%87%AA%E5%BB%BAMCP-server%E6%8E%A5%E5%85%A5Claude">上一篇</a>的做法自己写一个薄 MCP server，把 add &#x2F; search 两个接口包成 tools——这正是自建 MCP server 最典型的应用场景。</li><li><strong>记忆存储在本地，但 LLM 和 embedding 调用默认走 OpenAI &#x2F; Gemini 等外部接口</strong>，记忆原文仍会出网。官方 server 目前的模型选项不含本地模型，要彻底不出网得走社区方案（如基于 Ollama 的桥接项目），部署复杂度再上一个台阶。</li></ol><h2 id="本地自管还是云端托管：三种记忆方案对比"><a href="#本地自管还是云端托管：三种记忆方案对比" class="headerlink" title="本地自管还是云端托管：三种记忆方案对比"></a>本地自管还是云端托管：三种记忆方案对比</h2><table><thead><tr><th>维度</th><th>官方 memory server</th><th>mem0 云端</th><th>mem0 自托管</th></tr></thead><tbody><tr><td>部署成本</td><td>一条命令</td><td>一条命令 + API key</td><td>docker compose + 桥接 MCP</td></tr><tr><td>检索方式</td><td>图谱关键词匹配</td><td>向量语义检索</td><td>向量语义检索</td></tr><tr><td>数据存放</td><td>本地 JSONL，完全自管</td><td>mem0 云端</td><td>本机（embedding 默认出网）</td></tr><tr><td>跨设备</td><td>手动同步（git 即可）</td><td>自动</td><td>自己架服务</td></tr><tr><td>适合谁</td><td>个人项目，第一次上记忆</td><td>多设备工作，接受托管</td><td>团队内部，有数据合规要求</td></tr></tbody></table><p>我的建议是从官方 memory server 起步：成本几乎为零，记忆文件肉眼可读，先用两周验证「记忆协议」这套工作流是否适合你，再决定要不要升级到语义检索。记忆系统的瓶颈通常不在检索算法，而在「存了什么」：如果记忆协议写得好，关键词匹配对个人项目已经够用；反过来，没有协议约束存储质量，换上向量检索也只是帮你更快地翻出一堆没价值的记忆。</p><h2 id="更进一步：hooks-强制检索、自建记忆-server"><a href="#更进一步：hooks-强制检索、自建记忆-server" class="headerlink" title="更进一步：hooks 强制检索、自建记忆 server"></a>更进一步：hooks 强制检索、自建记忆 server</h2><ul><li>记忆协议本质上是一种 prompt 工程，配合 <a href="/ClaudeCode%E5%AE%9E%E6%88%98%E6%95%99%E7%A8%8B-%E5%AE%89%E8%A3%85CLAUDEmd-hooks-subagent">Claude Code 的 hooks</a> 可以做得更硬：用 SessionStart hook 强制在会话开始注入检索结果，不依赖 Claude 自觉</li><li>官方 memory server 只是参考实现，读完<a href="/%E8%87%AA%E5%BB%BAMCP-server%E6%8E%A5%E5%85%A5Claude">自建 MCP Server</a> 你完全可以针对团队需求写一个自己的记忆 server——比如把存储后端换成团队已有的 PostgreSQL</li><li>想给记忆系统加「定期整理」能力（合并重复、清理过期），可以封装成一个 <a href="/%E4%BB%8E0%E5%88%B01%E5%86%99%E4%B8%80%E4%B8%AAClaude-Skill-%E8%A7%84%E8%8C%83%E5%86%99%E6%B3%95%E4%B8%8E%E5%AE%9E%E6%88%98">Claude Skill</a></li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> tutorial </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Claude Code </tag>
+            
+            <tag> Claude </tag>
+            
+            <tag> AI </tag>
+            
+            <tag> MCP </tag>
+            
+            <tag> mem0 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>自建一个 MCP Server 接入 Claude：从协议到代码到上线</title>
       <link href="/%E8%87%AA%E5%BB%BAMCP-server%E6%8E%A5%E5%85%A5Claude/"/>
       <url>/%E8%87%AA%E5%BB%BAMCP-server%E6%8E%A5%E5%85%A5Claude/</url>
@@ -247,11 +313,11 @@
             
             <tag> CLI </tag>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Mac </tag>
             
             <tag> Terminal </tag>
-            
-            <tag> 效率工具 </tag>
             
             <tag> Neovim </tag>
             
@@ -282,11 +348,11 @@
             
             <tag> CLI </tag>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Mac </tag>
             
             <tag> Terminal </tag>
-            
-            <tag> 效率工具 </tag>
             
             <tag> fastfetch </tag>
             
@@ -317,11 +383,11 @@
             
             <tag> Git </tag>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Mac </tag>
             
             <tag> Terminal </tag>
-            
-            <tag> 效率工具 </tag>
             
             <tag> lazygit </tag>
             
@@ -350,6 +416,8 @@
             
             <tag> CLI </tag>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Mac </tag>
             
             <tag> Terminal </tag>
@@ -357,8 +425,6 @@
             <tag> atuin </tag>
             
             <tag> zoxide </tag>
-            
-            <tag> 效率工具 </tag>
             
         </tags>
       
@@ -385,11 +451,11 @@
             
             <tag> CLI </tag>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Mac </tag>
             
             <tag> Terminal </tag>
-            
-            <tag> 效率工具 </tag>
             
         </tags>
       
@@ -416,11 +482,11 @@
             
             <tag> CLI </tag>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Mac </tag>
             
             <tag> Terminal </tag>
-            
-            <tag> 效率工具 </tag>
             
         </tags>
       
@@ -548,11 +614,11 @@
             
             <tag> CLI </tag>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Mac </tag>
             
             <tag> Terminal </tag>
-            
-            <tag> 效率工具 </tag>
             
         </tags>
       
