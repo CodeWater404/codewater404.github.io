@@ -1,0 +1,684 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战 | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="chmod 数字模式怎么算、符号模式何时更好用、setuid&#x2F;setgid&#x2F;sticky bit 到底在干嘛，配合 chown 修一个权限乱掉的部署目录。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战">
+<meta property="og:url" content="https://blog.codewater.top/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="chmod 数字模式怎么算、符号模式何时更好用、setuid&#x2F;setgid&#x2F;sticky bit 到底在干嘛，配合 chown 修一个权限乱掉的部署目录。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p31.jpg">
+<meta property="article:published_time" content="2026-07-10T02:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-10T02:00:00.000Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="命令行">
+<meta property="article:tag" content="权限管理">
+<meta property="article:tag" content="chmod">
+<meta property="article:tag" content="chown">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p31.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战",
+  "url": "https://blog.codewater.top/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/",
+  "image": "https://blog.codewater.top/img/p31.jpg",
+  "datePublished": "2026-07-10T02:00:00.000Z",
+  "dateModified": "2026-07-10T02:00:00.000Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><style>.category-lists{background:linear-gradient(135deg,#667eea55,#f5576c44,#4facfe44,#43e97b44);border-radius:20px;padding:28px !important;position:relative;overflow:hidden}.category-lists::before{content:'';position:absolute;top:-80px;left:-80px;width:240px;height:240px;background:radial-gradient(circle,#a78bfa88,transparent 70%);border-radius:50%;pointer-events:none}.category-lists::after{content:'';position:absolute;bottom:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,#f9a8d488,transparent 70%);border-radius:50%;pointer-events:none}.category-lists .category-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;padding:0 !important;list-style:none !important;margin:0 !important;position:relative;z-index:1}.category-lists .category-list>li.category-list-item{background:rgba(255,255,255,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.55);border-radius:14px;padding:22px 20px 18px;margin:0 !important;box-shadow:0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.7);transition:transform .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}.category-lists .category-list>li.category-list-item::before{display:none !important}.category-lists .category-list>li.category-list-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.7)}.category-lists .category-list-link{font-size:1rem;font-weight:700;color:#3b3b5c !important;display:block;margin-bottom:10px;line-height:1.3}.category-lists .category-list-count{display:inline-block;font-size:.78rem;font-weight:600;color:#5a5a7a !important;background:rgba(255,255,255,0.5);padding:2px 10px;border-radius:20px;margin-left:0 !important;border:1px solid rgba(255,255,255,0.7)}.category-lists .category-list-count::before,.category-lists .category-list-count::after{content:'' !important}.category-lists .category-list-child{margin-top:10px;padding:10px 0 0 0 !important;border-top:1px solid rgba(255,255,255,0.4) !important;list-style:none !important}.category-lists .category-list-child li.category-list-item{margin:5px 0 !important;padding:0 !important}.category-lists .category-list-child li.category-list-item::before{display:none !important}.category-lists .category-list-child .category-list-link{font-size:.82rem;font-weight:400;color:#5a5a7a !important;margin-bottom:0}.category-lists .category-list-child .category-list-count{font-size:.7rem;padding:1px 7px}[data-theme=dark] .category-lists .category-list>li.category-list-item{background:rgba(30,30,50,0.45);border-color:rgba(255,255,255,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.1)}[data-theme=dark] .category-lists .category-list-link{color:#e2e2f0 !important}[data-theme=dark] .category-lists .category-list-count{color:#a0a0c0 !important;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}[data-theme=dark] .category-lists .category-list-child .category-list-link{color:#a0a0c0 !important}</style><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Code Water" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">32</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">63</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p31.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-10T02:00:00.000Z" title="发表于 2026-07-10 10:00:00">2026-07-10</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-10T02:00:00.000Z" title="更新于 2026-07-10 10:00:00">2026-07-10</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/tools/">tools</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3.8k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>12分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>一个目录权限乱了——可能是遗留脚本用 root 建的文件，也可能是 SCP 传过来的文件属主对不上——网站访问直接 403，部署脚本报 <code>Permission denied</code>。这时候大部分人的第一反应是抄一条 <code>chmod -R 777</code>，网站是能访问了，但等于把整个目录对所有人开放读写执行，治标不治本，出了安全事故说不清楚。</p>
+<p>chmod 和 chown 是治本的工具，但数字模式怎么算、setuid&#x2F;setgid&#x2F;sticky bit 到底在干嘛，很多人一直没搞清楚过。这篇把这两个命令的实际用法过一遍，最后用一个真实场景收尾。</p>
+<span id="more"></span>
+
+<p>这是 Linux 常见命令系列的第一篇详细教程，承接 <a href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE">Linux 常见命令与工具地图</a>。</p>
+<h2 id="权限模型回顾：读懂-ls-l-那串字符"><a href="#权限模型回顾：读懂-ls-l-那串字符" class="headerlink" title="权限模型回顾：读懂 ls -l 那串字符"></a>权限模型回顾：读懂 <code>ls -l</code> 那串字符</h2><p><code>ls -l</code> 输出的第一列长这样：<code>-rwxr-xr--</code>。十个字符拆成四段：</p>
+<ul>
+<li>第 1 位：文件类型（<code>-</code> 普通文件，<code>d</code> 目录，<code>l</code> 符号链接）</li>
+<li>第 2-4 位：<strong>owner</strong>（文件所有者）的读写执行权限</li>
+<li>第 5-7 位：<strong>group</strong>（所属组）的读写执行权限</li>
+<li>第 8-10 位：<strong>other</strong>（其他所有人）的读写执行权限</li>
+</ul>
+<p>每一组里 <code>r</code>&#x2F;<code>w</code>&#x2F;<code>x</code> 对应的数字是固定的：<code>r=4</code>、<code>w=2</code>、<code>x=1</code>，一组权限的数字就是这三个数加起来。<code>rwxr-xr--</code> 换算成数字就是 <code>754</code>——owner 是 4+2+1&#x3D;7，group 是 4+0+1&#x3D;5，other 是 4+0+0&#x3D;4。下一节的数字模式全靠这套加法。</p>
+<h2 id="chmod-数字模式：三位数背后的加法"><a href="#chmod-数字模式：三位数背后的加法" class="headerlink" title="chmod 数字模式：三位数背后的加法"></a>chmod 数字模式：三位数背后的加法</h2><p>数字模式就是把 owner、group、other 三组权限各自换算成 0-7 的数字，拼在一起传给 chmod：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> 644 config.yaml</span><br><span class="line"><span class="comment">#     6=4+2：owner 读写，不能执行</span></span><br><span class="line"><span class="comment">#     4：group 只读</span></span><br><span class="line"><span class="comment">#     4：other 只读</span></span><br><span class="line"><span class="comment">#     配置文件的标准权限——自己能改，别人只能看</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">chmod</span> 755 deploy.sh</span><br><span class="line"><span class="comment">#     7=4+2+1：owner 读写执行</span></span><br><span class="line"><span class="comment">#     5=4+1：group、other 能读能执行，不能改</span></span><br><span class="line"><span class="comment">#     可执行脚本的标准权限</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">chmod</span> 600 id_rsa</span><br><span class="line"><span class="comment">#     6：owner 读写</span></span><br><span class="line"><span class="comment">#     0、0：group、other 什么都不能干</span></span><br><span class="line"><span class="comment">#     私钥文件必须这么设，权限太开 SSH 会直接拒绝使用这把钥匙</span></span><br></pre></td></tr></table></figure>
+
+<p>记这三组数字对（644 配置、755 可执行、600 私钥）就能覆盖日常八成场景，其余情况现算：想清楚 owner&#x2F;group&#x2F;other 各自要不要读、写、执行，三个数字加出来拼在一起就是。</p>
+<h2 id="chmod-符号模式：什么时候比数字模式好用"><a href="#chmod-符号模式：什么时候比数字模式好用" class="headerlink" title="chmod 符号模式：什么时候比数字模式好用"></a>chmod 符号模式：什么时候比数字模式好用</h2><p>数字模式的前提是你想清楚了三组权限的最终状态。但很多时候你只想”在现有权限基础上加一位”，这时候符号模式更顺手：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> u+x run.sh</span><br><span class="line"><span class="comment">#     u：user（owner的简写），+x：加上执行权限，不动其他位</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">chmod</span> g-w shared/</span><br><span class="line"><span class="comment">#     g：group，-w：去掉写权限，owner 和 other 的权限不受影响</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">chmod</span> o=r public.conf</span><br><span class="line"><span class="comment">#     o：other，=r：直接把 other 的权限设成只读（=是赋值，不是叠加）</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">chmod</span> a+X find_scripts/*</span><br><span class="line"><span class="comment">#     a：all（u+g+o 的简写），+X：对目录总是加执行位（方便进入），</span></span><br><span class="line"><span class="comment">#     对普通文件只有已经对某个身份（owner/group/other 任一）开了执行权限才加，</span></span><br><span class="line"><span class="comment">#     不会把本来不可执行的普通文件也变成可执行文件——这正是它和小写 x 的区别</span></span><br></pre></td></tr></table></figure>
+
+<p><code>u</code>&#x2F;<code>g</code>&#x2F;<code>o</code>&#x2F;<code>a</code> 决定改谁，<code>+</code>&#x2F;<code>-</code>&#x2F;<code>=</code> 决定加、减还是直接赋值，<code>r</code>&#x2F;<code>w</code>&#x2F;<code>x</code>&#x2F;<code>X</code> 决定改哪个权限位。这四个维度组合起来，比每次都要心算数字模式更不容易出错。</p>
+<h2 id="特殊权限位：setuid、setgid、sticky-bit-到底在干嘛"><a href="#特殊权限位：setuid、setgid、sticky-bit-到底在干嘛" class="headerlink" title="特殊权限位：setuid、setgid、sticky bit 到底在干嘛"></a>特殊权限位：setuid、setgid、sticky bit 到底在干嘛</h2><p>回顾第一节的权限模型：<code>rwx</code> 三组权限，每一位要么是字母要么是 <code>-</code>。但用 <code>ls -l</code> 查看某些文件或目录时，你会碰到不在这个范围内的符号：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">-rwsr-xr-x  1 root root  /usr/bin/passwd</span><br><span class="line">drwxrwsr-x  2 root dev   /srv/shared-project</span><br><span class="line">drwxrwxrwt 10 root root  /tmp</span><br></pre></td></tr></table></figure>
+
+<p>第一行 owner 的 x 位置变成了 <code>s</code>，第二行 group 的 x 位置也是 <code>s</code>，第三行 other 的 x 位置变成了 <code>t</code>。这三个符号不属于 rwx 常规模型，就是这一节要讲的<strong>特殊权限位</strong>：setuid、setgid、sticky bit，分别顶替 owner &#x2F; group &#x2F; other 三组里的 x 位置。它们不是额外发明出来的权限，而是在执行权限基础上叠加的特殊标记，各自解决一个具体问题，一个一个来看。</p>
+<h3 id="setuid：让别人执行你的程序时，暂时”变成你”"><a href="#setuid：让别人执行你的程序时，暂时”变成你”" class="headerlink" title="setuid：让别人执行你的程序时，暂时”变成你”"></a>setuid：让别人执行你的程序时，暂时”变成你”</h3><p>普通用户能改自己的密码，但密码是存在 <code>/etc/shadow</code> 里的，这个文件只有 root 能写。矛盾就在这——普通用户没有权限写 <code>/etc/shadow</code>，却要靠 <code>passwd</code> 这个程序去改它。</p>
+<p><code>setuid</code> 就是解决这个矛盾的：给 <code>passwd</code> 这个可执行文件加上 setuid，效果是<strong>不管谁来执行它，执行的过程中都”变成”这个文件的所有者</strong>（也就是 root）。所以普通用户执行 <code>passwd</code>，程序运行期间临时有了 root 的权限，改完密码，权限又还回去。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> u+s /usr/bin/passwd</span><br><span class="line"><span class="comment">#     setuid 只对可执行文件有意义，加在目录上没有效果，会被系统忽略</span></span><br></pre></td></tr></table></figure>
+
+<p>只对可执行文件生效，这个属性本身也有风险——如果一个装了 setuid 的程序本身有漏洞，攻击者可能借着它拿到 root 权限，所以只在真正需要的地方加，不要乱设。</p>
+<h3 id="setgid：让共享文件夹里新建的文件自动归到同一个组"><a href="#setgid：让共享文件夹里新建的文件自动归到同一个组" class="headerlink" title="setgid：让共享文件夹里新建的文件自动归到同一个组"></a>setgid：让共享文件夹里新建的文件自动归到同一个组</h3><p>团队共享一个目录时经常遇到这种烦心事：A 建的文件属组是 A 的主组，B 建的文件属组是 B 的主组，两人互相没权限改对方的文件，得手动 <code>chgrp</code> 一遍遍改。</p>
+<p><code>setgid</code> 加在<strong>目录</strong>上就能解决：这个目录下新建的任何文件和子目录，属组都自动跟目录本身一致，不看是谁建的。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> g+s /srv/shared-project</span><br><span class="line"><span class="comment">#     之后组内任何人在这个目录下新建文件，属组都自动是 shared-project 的组</span></span><br><span class="line"><span class="comment">#     不用每次手动 chgrp，协作目录必备</span></span><br></pre></td></tr></table></figure>
+
+<p>（setgid 加在可执行文件上也有效果，跟 setuid 类似——变成文件所属组的身份，但这个用法比加在目录上少见得多，日常基本用不到。）</p>
+<h3 id="sticky-bit：谁建的文件谁能删，别人删不了"><a href="#sticky-bit：谁建的文件谁能删，别人删不了" class="headerlink" title="sticky bit：谁建的文件谁能删，别人删不了"></a>sticky bit：谁建的文件谁能删，别人删不了</h3><p>想象小区里的公共快递柜：谁都能往里放包裹，但只有放的人自己能取走，别人拿不走你的包裹。<code>/tmp</code> 目录就是这个逻辑——所有人都能在里面写文件（不然没法用），但如果没有额外限制，任何人也能删掉别人的临时文件，那就乱套了。</p>
+<p><code>sticky bit</code> 加在<strong>目录</strong>上，效果是：即使某人对这个目录有写权限，也只能删自己建的文件，删不了别人的。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> +t /tmp</span><br><span class="line"><span class="comment">#     /tmp 默认就是这个设置，所有人能写，但谁也删不了别人的文件</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="三个位对应的数字，以及-ls-l-怎么看"><a href="#三个位对应的数字，以及-ls-l-怎么看" class="headerlink" title="三个位对应的数字，以及 ls -l 怎么看"></a>三个位对应的数字，以及 <code>ls -l</code> 怎么看</h3><p>三个特殊位在数字模式里对应第四位（写在平时那三位数字前面），可以叠加：</p>
+<table>
+<thead>
+<tr>
+<th>权限位</th>
+<th>数字</th>
+<th>加在哪</th>
+<th><code>ls -l</code> 里顶替谁的 x</th>
+<th>一句话</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>setuid</td>
+<td>4</td>
+<td>可执行文件</td>
+<td><strong>owner</strong> 组的 x（第 3 位）</td>
+<td>别人执行时临时”变成”文件所有者</td>
+</tr>
+<tr>
+<td>setgid</td>
+<td>2</td>
+<td>目录</td>
+<td><strong>group</strong> 组的 x（第 6 位）</td>
+<td>目录下新建的文件自动跟目录同一个组</td>
+</tr>
+<tr>
+<td>sticky bit</td>
+<td>1</td>
+<td>目录</td>
+<td><strong>other</strong> 组的 x（第 9 位）</td>
+<td>谁建的文件谁能删，别人删不了</td>
+</tr>
+</tbody></table>
+<p>三个位置各管各的，不会挤在一起：setuid 是 owner 的事，setgid 是 group 的事，sticky 是 other 的事，加在哪组权限上就顶替哪组的 x。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> 4755 /usr/bin/passwd     <span class="comment"># setuid（4） + 标准的 755</span></span><br><span class="line"><span class="built_in">chmod</span> 2775 /srv/shared-project <span class="comment"># setgid（2） + 目录标准的 775</span></span><br><span class="line"><span class="built_in">chmod</span> 1777 /tmp                 <span class="comment"># sticky（1） + 完全开放</span></span><br></pre></td></tr></table></figure>
+
+<p>开头那三行 <code>ls -l</code> 输出里的 s&#x2F;t 都是小写，这是正常情况——owner（或 other）本身也有执行权限。看大小写的规则就一条：**小写表示正常，大写表示”这个位置本该有执行权限，但没有”**。比如 <code>rwSr--r--</code>，大写 <code>S</code> 说明 setuid 生效了，但 owner 没有执行权限，这种设置通常没意义，多半是配错了。看到大写的 S 或 T，基本可以判断是漏加了执行位，回去检查一下。</p>
+<h2 id="chmod-R-递归的坑：符号链接会不会被改"><a href="#chmod-R-递归的坑：符号链接会不会被改" class="headerlink" title="chmod -R 递归的坑：符号链接会不会被改"></a><code>chmod -R</code> 递归的坑：符号链接会不会被改</h2><p><code>chmod -R</code> 递归修改目录下所有内容时，符号链接是这里最容易被误解的地方。符号链接本身的权限在 Linux 上<strong>不生效</strong>（永远显示 <code>lrwxrwxrwx</code>，改它没有意义）。默认行为其实比较克制：只有当符号链接直接出现在命令行参数里、并且指向一个目录时才会跟随继续递归；<strong>递归过程中在目录内部碰到的符号链接不会被跟随</strong>，所以正常情况下一条 <code>chmod -R 755 .</code> 不会意外爬到符号链接指向的别处。真正危险的是显式加了 <code>-L</code>——这个选项让 chmod 遇到任何目录型符号链接都跟随，如果目录里的链接指向了 <code>/</code> 或者其他敏感路径，递归范围会远超预期。</p>
+<p>三个选项控制这个行为，只有最后一个生效（重复指定以最后一个为准）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> -R -H 755 project/   <span class="comment"># 默认行为：命令行里直接给出的符号链接，如果指向目录会跟随；</span></span><br><span class="line">                            <span class="comment"># 但递归过程中在目录内部新发现的符号链接不跟随</span></span><br><span class="line"><span class="built_in">chmod</span> -R -L 755 project/   <span class="comment"># 遇到目录型符号链接就跟随（最危险，容易改到意料之外的地方）</span></span><br><span class="line"><span class="built_in">chmod</span> -R -P 755 project/   <span class="comment"># 完全不跟随任何符号链接，比默认的 -H 更保守</span></span><br></pre></td></tr></table></figure>
+
+<p>不确定目录里有没有埋着符号链接时，先跑一遍 <code>find project/ -type l</code> 心里有数，比事后排查权限为什么跑到别处去了省事得多。</p>
+<h2 id="chmod-常用参数速查表"><a href="#chmod-常用参数速查表" class="headerlink" title="chmod 常用参数速查表"></a>chmod 常用参数速查表</h2><p>前面几节讲的都是这张表里的内容，汇总在一起方便直接查：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-R</code>, <code>--recursive</code></td>
+<td>递归处理目录下所有文件和子目录</td>
+</tr>
+<tr>
+<td><code>-v</code>, <code>--verbose</code></td>
+<td>每处理一个文件都输出结果</td>
+</tr>
+<tr>
+<td><code>-c</code>, <code>--changes</code></td>
+<td>和 <code>-v</code> 类似，但只在权限真的发生变化时才输出</td>
+</tr>
+<tr>
+<td><code>-f</code>, <code>--silent</code>, <code>--quiet</code></td>
+<td>屏蔽大部分错误提示</td>
+</tr>
+<tr>
+<td><code>--reference=文件</code></td>
+<td>权限抄自参考文件，不用自己写数字或符号模式</td>
+</tr>
+<tr>
+<td><code>-H</code></td>
+<td>递归时只跟随命令行直接给出的符号链接（默认行为）</td>
+</tr>
+<tr>
+<td><code>-L</code></td>
+<td>递归时跟随所有遇到的目录型符号链接（最危险）</td>
+</tr>
+<tr>
+<td><code>-P</code></td>
+<td>递归时完全不跟随任何符号链接</td>
+</tr>
+<tr>
+<td><code>u</code> &#x2F; <code>g</code> &#x2F; <code>o</code> &#x2F; <code>a</code></td>
+<td>符号模式里指定改谁：owner &#x2F; group &#x2F; other &#x2F; all</td>
+</tr>
+<tr>
+<td><code>+</code> &#x2F; <code>-</code> &#x2F; <code>=</code></td>
+<td>符号模式里指定加上、去掉还是直接赋值</td>
+</tr>
+<tr>
+<td><code>r</code> &#x2F; <code>w</code> &#x2F; <code>x</code> &#x2F; <code>X</code></td>
+<td>读 &#x2F; 写 &#x2F; 执行 &#x2F; 条件执行（目录总加，文件按原有执行权限判断）</td>
+</tr>
+<tr>
+<td>数字模式前导 <code>4</code>&#x2F;<code>2</code>&#x2F;<code>1</code></td>
+<td>特殊权限位：setuid &#x2F; setgid &#x2F; sticky bit，可叠加写在三位数字模式前面</td>
+</tr>
+</tbody></table>
+<h2 id="chown：属主属组一起改，还是分开改"><a href="#chown：属主属组一起改，还是分开改" class="headerlink" title="chown：属主属组一起改，还是分开改"></a>chown：属主属组一起改，还是分开改</h2><p>chown 修改文件的所有者和所属组，语法是 <code>chown 属主:属组 文件</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chown</span> deploy:www-data app.log</span><br><span class="line"><span class="comment">#     属主改成 deploy，属组改成 www-data，一步到位</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">chown</span> deploy app.log</span><br><span class="line"><span class="comment">#     只写属主，属组不变</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">chown</span> :www-data app.log</span><br><span class="line"><span class="comment">#     只写属组（前面留空），等价于 chgrp www-data app.log</span></span><br></pre></td></tr></table></figure>
+
+<p><code>chgrp</code> 和 <code>chown :group</code> 做的是同一件事——<code>chgrp</code> 只是历史遗留的专用命令，只能改组，功能被 <code>chown</code> 的 <code>:group</code> 语法完全覆盖。新写脚本用 <code>chown :group</code> 更统一，不用记两个命令。</p>
+<p>用户名在 <code>/etc/passwd</code> 里查不到（比如跨系统同步过来的文件，UID 在本机没有对应用户名）时，直接传数字 UID:GID 也行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chown</span> 1001:1001 orphaned_file</span><br><span class="line"><span class="comment">#     UID 和 GID 直接是数字，不依赖 /etc/passwd 里有没有这个用户名</span></span><br></pre></td></tr></table></figure>
+
+<p><code>-R</code> 递归的语义比 chmod 简单得多——符号链接本身没有属主属组的概念（继承自它指向的目标），chown 的递归不存在上面 chmod 那种”改错地方”的风险。</p>
+<p>还有两个不算高频、但排查时很有用的参数：<code>--from=旧属主:旧属组</code> 只在文件当前属主属组和指定值一致时才真正执行改动，批量操作时能防止误伤不该改的文件；<code>-h</code>&#x2F;<code>--no-dereference</code> 改的是符号链接本身而不是它指向的目标——<strong>默认情况下 chown 是解引用符号链接、改目标</strong>，这一点和很多人的直觉相反，需要改链接本身时必须显式加 <code>-h</code>。</p>
+<h2 id="chown-常用参数速查表"><a href="#chown-常用参数速查表" class="headerlink" title="chown 常用参数速查表"></a>chown 常用参数速查表</h2><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-R</code>, <code>--recursive</code></td>
+<td>递归处理目录下所有文件和子目录</td>
+</tr>
+<tr>
+<td><code>-v</code>, <code>--verbose</code></td>
+<td>每处理一个文件都输出结果</td>
+</tr>
+<tr>
+<td><code>-f</code>, <code>--silent</code>, <code>--quiet</code></td>
+<td>屏蔽大部分错误提示</td>
+</tr>
+<tr>
+<td><code>-h</code>, <code>--no-dereference</code></td>
+<td>改符号链接本身，不改它指向的目标（默认是改目标）</td>
+</tr>
+<tr>
+<td><code>--reference=文件</code></td>
+<td>属主属组抄自参考文件</td>
+</tr>
+<tr>
+<td><code>--from=旧属主:旧属组</code></td>
+<td>只有当前属主&#x2F;属组和这里指定的一致才真正执行改动，防误伤</td>
+</tr>
+<tr>
+<td><code>user:group</code></td>
+<td>同时指定属主和属组</td>
+</tr>
+<tr>
+<td><code>:group</code></td>
+<td>只改属组（前面留空），等价于 <code>chgrp</code></td>
+</tr>
+</tbody></table>
+<h2 id="实战：修一个权限乱掉的部署目录"><a href="#实战：修一个权限乱掉的部署目录" class="headerlink" title="实战：修一个权限乱掉的部署目录"></a>实战：修一个权限乱掉的部署目录</h2><p>场景：Nginx 的静态资源目录 <code>/var/www/site</code>，本来该属于 <code>www-data</code> 用户和组，结果某次运维手滑用 <code>sudo</code> 直接解压部署包，整个目录变成了 <code>root:root</code>，Nginx 进程读不了文件，网站全站 403。</p>
+<p>第一步，改回属主属组：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">chown</span> -R www-data:www-data /var/www/site</span><br><span class="line"><span class="comment">#     -R：递归改整个目录树，属主属组都改成 www-data</span></span><br></pre></td></tr></table></figure>
+
+<p>第二步，权限也得配套——目录需要可进入（执行位），文件不需要：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> find /var/www/site -<span class="built_in">type</span> d -<span class="built_in">exec</span> <span class="built_in">chmod</span> 755 &#123;&#125; \;</span><br><span class="line"><span class="comment">#     -type d：只挑目录，755 让 Nginx 能进入并列出目录内容</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">sudo</span> find /var/www/site -<span class="built_in">type</span> f -<span class="built_in">exec</span> <span class="built_in">chmod</span> 644 &#123;&#125; \;</span><br><span class="line"><span class="comment">#     -type f：只挑文件，644 让 Nginx 能读文件内容，但不给执行权限</span></span><br></pre></td></tr></table></figure>
+
+<p>这里不能图省事直接 <code>chmod -R 755 /var/www/site</code>——那样会把所有静态文件也变成可执行，权限比实际需要的更开放。目录和文件分开处理才是准确的做法，<code>find + chmod</code> 这个组合在权限修复场景里比手写循环更简洁可靠。</p>
+<h2 id="权限之外"><a href="#权限之外" class="headerlink" title="权限之外"></a>权限之外</h2><p>sudo 决定”谁能用 root 身份执行命令”，和 chmod&#x2F;chown 决定”文件本身谁能读写执行”是两个独立的问题，值得单开一篇讲。Linux 命令系列下一篇计划写 <code>rsync</code>——它的参数比 chmod&#x2F;chown 多得多，增量同步、排除规则、远程传输这些够写满一整篇。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/">https://blog.codewater.top/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Linux/">Linux</a><a class="post-meta__tags" href="/tags/%E5%91%BD%E4%BB%A4%E8%A1%8C/">命令行</a><a class="post-meta__tags" href="/tags/%E6%9D%83%E9%99%90%E7%AE%A1%E7%90%86/">权限管理</a><a class="post-meta__tags" href="/tags/chmod/">chmod</a><a class="post-meta__tags" href="/tags/chown/">chown</a></div><div class="post-share"><div class="social-share" data-image="/img/p31.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img class="cover" src="/img/p30.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Linux 常见命令与工具地图(备忘录)</div></div><div class="info-2"><div class="info-item-1">按场景分类的 Linux 命令速查地图：文件、文本处理、进程、网络、权限、包管理、压缩传输、Git，每条一句话说明用途，配合详细文章深入用法。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img class="cover" src="/img/p30.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-09</div><div class="info-item-2">Linux 常见命令与工具地图(备忘录)</div></div><div class="info-2"><div class="info-item-1">按场景分类的 Linux 命令速查地图：文件、文本处理、进程、网络、权限、包管理、压缩传输、Git，每条一句话说明用途，配合详细文章深入用法。</div></div></div></a><a class="pagination-related" href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/" title="Linux 服务器问题排查：端口、进程、日志常用命令速查"><img class="cover" src="/img/p22.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">Linux 服务器问题排查：端口、进程、日志常用命令速查</div></div><div class="info-2"><div class="info-item-1">Linux 服务器问题排查常用命令速查：ss/lsof 查端口占用，ps/top 看进程状态，systemctl/journalctl 管理服务和查日志，curl/dig 测网络连通，df/du/free 看磁盘内存，附完整排查流程。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">32</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">63</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9D%83%E9%99%90%E6%A8%A1%E5%9E%8B%E5%9B%9E%E9%A1%BE%EF%BC%9A%E8%AF%BB%E6%87%82-ls-l-%E9%82%A3%E4%B8%B2%E5%AD%97%E7%AC%A6"><span class="toc-number">1.</span> <span class="toc-text">权限模型回顾：读懂 ls -l 那串字符</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#chmod-%E6%95%B0%E5%AD%97%E6%A8%A1%E5%BC%8F%EF%BC%9A%E4%B8%89%E4%BD%8D%E6%95%B0%E8%83%8C%E5%90%8E%E7%9A%84%E5%8A%A0%E6%B3%95"><span class="toc-number">2.</span> <span class="toc-text">chmod 数字模式：三位数背后的加法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#chmod-%E7%AC%A6%E5%8F%B7%E6%A8%A1%E5%BC%8F%EF%BC%9A%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E6%AF%94%E6%95%B0%E5%AD%97%E6%A8%A1%E5%BC%8F%E5%A5%BD%E7%94%A8"><span class="toc-number">3.</span> <span class="toc-text">chmod 符号模式：什么时候比数字模式好用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%89%B9%E6%AE%8A%E6%9D%83%E9%99%90%E4%BD%8D%EF%BC%9Asetuid%E3%80%81setgid%E3%80%81sticky-bit-%E5%88%B0%E5%BA%95%E5%9C%A8%E5%B9%B2%E5%98%9B"><span class="toc-number">4.</span> <span class="toc-text">特殊权限位：setuid、setgid、sticky bit 到底在干嘛</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#setuid%EF%BC%9A%E8%AE%A9%E5%88%AB%E4%BA%BA%E6%89%A7%E8%A1%8C%E4%BD%A0%E7%9A%84%E7%A8%8B%E5%BA%8F%E6%97%B6%EF%BC%8C%E6%9A%82%E6%97%B6%E2%80%9D%E5%8F%98%E6%88%90%E4%BD%A0%E2%80%9D"><span class="toc-number">4.1.</span> <span class="toc-text">setuid：让别人执行你的程序时，暂时”变成你”</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#setgid%EF%BC%9A%E8%AE%A9%E5%85%B1%E4%BA%AB%E6%96%87%E4%BB%B6%E5%A4%B9%E9%87%8C%E6%96%B0%E5%BB%BA%E7%9A%84%E6%96%87%E4%BB%B6%E8%87%AA%E5%8A%A8%E5%BD%92%E5%88%B0%E5%90%8C%E4%B8%80%E4%B8%AA%E7%BB%84"><span class="toc-number">4.2.</span> <span class="toc-text">setgid：让共享文件夹里新建的文件自动归到同一个组</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#sticky-bit%EF%BC%9A%E8%B0%81%E5%BB%BA%E7%9A%84%E6%96%87%E4%BB%B6%E8%B0%81%E8%83%BD%E5%88%A0%EF%BC%8C%E5%88%AB%E4%BA%BA%E5%88%A0%E4%B8%8D%E4%BA%86"><span class="toc-number">4.3.</span> <span class="toc-text">sticky bit：谁建的文件谁能删，别人删不了</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%89%E4%B8%AA%E4%BD%8D%E5%AF%B9%E5%BA%94%E7%9A%84%E6%95%B0%E5%AD%97%EF%BC%8C%E4%BB%A5%E5%8F%8A-ls-l-%E6%80%8E%E4%B9%88%E7%9C%8B"><span class="toc-number">4.4.</span> <span class="toc-text">三个位对应的数字，以及 ls -l 怎么看</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#chmod-R-%E9%80%92%E5%BD%92%E7%9A%84%E5%9D%91%EF%BC%9A%E7%AC%A6%E5%8F%B7%E9%93%BE%E6%8E%A5%E4%BC%9A%E4%B8%8D%E4%BC%9A%E8%A2%AB%E6%94%B9"><span class="toc-number">5.</span> <span class="toc-text">chmod -R 递归的坑：符号链接会不会被改</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#chmod-%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">6.</span> <span class="toc-text">chmod 常用参数速查表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#chown%EF%BC%9A%E5%B1%9E%E4%B8%BB%E5%B1%9E%E7%BB%84%E4%B8%80%E8%B5%B7%E6%94%B9%EF%BC%8C%E8%BF%98%E6%98%AF%E5%88%86%E5%BC%80%E6%94%B9"><span class="toc-number">7.</span> <span class="toc-text">chown：属主属组一起改，还是分开改</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#chown-%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">8.</span> <span class="toc-text">chown 常用参数速查表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BF%AE%E4%B8%80%E4%B8%AA%E6%9D%83%E9%99%90%E4%B9%B1%E6%8E%89%E7%9A%84%E9%83%A8%E7%BD%B2%E7%9B%AE%E5%BD%95"><span class="toc-number">9.</span> <span class="toc-text">实战：修一个权限乱掉的部署目录</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9D%83%E9%99%90%E4%B9%8B%E5%A4%96"><span class="toc-number">10.</span> <span class="toc-text">权限之外</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/" title="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战"><img src="/img/p31.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战"/></a><div class="content"><a class="title" href="/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/" title="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战">Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战</a><time datetime="2026-07-10T02:00:00.000Z" title="发表于 2026-07-10 10:00:00">2026-07-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img src="/img/p30.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Linux 常见命令与工具地图(备忘录)"/></a><div class="content"><a class="title" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)">Linux 常见命令与工具地图(备忘录)</a><time datetime="2026-07-09T09:00:00.000Z" title="发表于 2026-07-09 17:00:00">2026-07-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E7%BB%99Claude-Code%E6%8E%A5%E5%85%A5%E5%A4%96%E9%83%A8%E8%AE%B0%E5%BF%86%E7%B3%BB%E7%BB%9F/" title="给 Claude Code 接入外部记忆系统：新会话不再失忆"><img src="/img/p29.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="给 Claude Code 接入外部记忆系统：新会话不再失忆"/></a><div class="content"><a class="title" href="/%E7%BB%99Claude-Code%E6%8E%A5%E5%85%A5%E5%A4%96%E9%83%A8%E8%AE%B0%E5%BF%86%E7%B3%BB%E7%BB%9F/" title="给 Claude Code 接入外部记忆系统：新会话不再失忆">给 Claude Code 接入外部记忆系统：新会话不再失忆</a><time datetime="2026-07-09T07:00:00.000Z" title="发表于 2026-07-09 15:00:00">2026-07-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E8%87%AA%E5%BB%BAMCP-server%E6%8E%A5%E5%85%A5Claude/" title="自建一个 MCP Server 接入 Claude：从协议到代码到上线"><img src="/img/p28.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="自建一个 MCP Server 接入 Claude：从协议到代码到上线"/></a><div class="content"><a class="title" href="/%E8%87%AA%E5%BB%BAMCP-server%E6%8E%A5%E5%85%A5Claude/" title="自建一个 MCP Server 接入 Claude：从协议到代码到上线">自建一个 MCP Server 接入 Claude：从协议到代码到上线</a><time datetime="2026-07-08T06:00:00.000Z" title="发表于 2026-07-08 14:00:00">2026-07-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E4%BB%8E0%E5%88%B01%E5%86%99%E4%B8%80%E4%B8%AAClaude-Skill-%E8%A7%84%E8%8C%83%E5%86%99%E6%B3%95%E4%B8%8E%E5%AE%9E%E6%88%98/" title="从 0 到 1 写一个 Claude Skill：规范格式、description 写法与发版说明实战"><img src="/img/p27.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 0 到 1 写一个 Claude Skill：规范格式、description 写法与发版说明实战"/></a><div class="content"><a class="title" href="/%E4%BB%8E0%E5%88%B01%E5%86%99%E4%B8%80%E4%B8%AAClaude-Skill-%E8%A7%84%E8%8C%83%E5%86%99%E6%B3%95%E4%B8%8E%E5%AE%9E%E6%88%98/" title="从 0 到 1 写一个 Claude Skill：规范格式、description 写法与发版说明实战">从 0 到 1 写一个 Claude Skill：规范格式、description 写法与发版说明实战</a><time datetime="2026-07-08T03:00:00.000Z" title="发表于 2026-07-08 11:00:00">2026-07-08</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script>function injectCategoryDesc(){var el=document.querySelector('.category-lists');if(!el||el.nextElementSibling&&el.nextElementSibling.id==='cat-desc')return;var desc=document.createElement('div');desc.id='cat-desc';desc.style.cssText='margin-top:28px;padding:20px 24px;background:rgba(255,255,255,0.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.45);border-radius:14px;';desc.innerHTML='<h3 style="margin:0 0 14px;font-size:.95rem;font-weight:700;color:#3b3b5c;">各分类说明</h3><table style="width:100%;border-collapse:collapse;font-size:.875rem;"><tbody><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">tools</td><td style="padding:8px 12px;color:#5a5a7a;">工具链系列，覆盖终端、Shell、搜索、文件管理、Git TUI、编辑器等；也包含 tldr、git tag 等命令速查</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">golang</td><td style="padding:8px 12px;color:#5a5a7a;">Go 后端实战：常见业务问题解决方案实现</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">git</td><td style="padding:8px 12px;color:#5a5a7a;">Git 常见使用方式以及操作技巧</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">ai</td><td style="padding:8px 12px;color:#5a5a7a;"> ai 相关使用和分享</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">cursor</td><td style="padding:8px 12px;color:#5a5a7a;">Cursor 编辑器：使用场景和难点</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">Hexo</td><td style="padding:8px 12px;color:#5a5a7a;">hexo 搭建博客的常见配置技巧</td></tr><tr><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">problem</td><td style="padding:8px 12px;color:#5a5a7a;">记录各种问题报错的排查过程</td></tr></tbody></table>';el.after(desc);}document.addEventListener('DOMContentLoaded',injectCategoryDesc);document.addEventListener('pjax:complete',injectCategoryDesc);</script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>
