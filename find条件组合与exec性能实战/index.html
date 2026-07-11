@@ -1,0 +1,629 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>find：条件组合、-exec 两种写法与性能实战 | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="find 的条件与动作怎么分、-mtime&#x2F;-size 符号方向、-exec 用 \; 和 + 性能差在哪，一篇讲清楚原生 find 的实战用法。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="find：条件组合、-exec 两种写法与性能实战">
+<meta property="og:url" content="https://blog.codewater.top/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="find 的条件与动作怎么分、-mtime&#x2F;-size 符号方向、-exec 用 \; 和 + 性能差在哪，一篇讲清楚原生 find 的实战用法。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p33.jpg">
+<meta property="article:published_time" content="2026-07-11T07:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-11T07:00:00.000Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="命令行">
+<meta property="article:tag" content="find">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p33.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "find：条件组合、-exec 两种写法与性能实战",
+  "url": "https://blog.codewater.top/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/",
+  "image": "https://blog.codewater.top/img/p33.jpg",
+  "datePublished": "2026-07-11T07:00:00.000Z",
+  "dateModified": "2026-07-11T07:00:00.000Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'find：条件组合、-exec 两种写法与性能实战',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><style>.category-lists{background:linear-gradient(135deg,#667eea55,#f5576c44,#4facfe44,#43e97b44);border-radius:20px;padding:28px !important;position:relative;overflow:hidden}.category-lists::before{content:'';position:absolute;top:-80px;left:-80px;width:240px;height:240px;background:radial-gradient(circle,#a78bfa88,transparent 70%);border-radius:50%;pointer-events:none}.category-lists::after{content:'';position:absolute;bottom:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,#f9a8d488,transparent 70%);border-radius:50%;pointer-events:none}.category-lists .category-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;padding:0 !important;list-style:none !important;margin:0 !important;position:relative;z-index:1}.category-lists .category-list>li.category-list-item{background:rgba(255,255,255,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.55);border-radius:14px;padding:22px 20px 18px;margin:0 !important;box-shadow:0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.7);transition:transform .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}.category-lists .category-list>li.category-list-item::before{display:none !important}.category-lists .category-list>li.category-list-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.7)}.category-lists .category-list-link{font-size:1rem;font-weight:700;color:#3b3b5c !important;display:block;margin-bottom:10px;line-height:1.3}.category-lists .category-list-count{display:inline-block;font-size:.78rem;font-weight:600;color:#5a5a7a !important;background:rgba(255,255,255,0.5);padding:2px 10px;border-radius:20px;margin-left:0 !important;border:1px solid rgba(255,255,255,0.7)}.category-lists .category-list-count::before,.category-lists .category-list-count::after{content:'' !important}.category-lists .category-list-child{margin-top:10px;padding:10px 0 0 0 !important;border-top:1px solid rgba(255,255,255,0.4) !important;list-style:none !important}.category-lists .category-list-child li.category-list-item{margin:5px 0 !important;padding:0 !important}.category-lists .category-list-child li.category-list-item::before{display:none !important}.category-lists .category-list-child .category-list-link{font-size:.82rem;font-weight:400;color:#5a5a7a !important;margin-bottom:0}.category-lists .category-list-child .category-list-count{font-size:.7rem;padding:1px 7px}[data-theme=dark] .category-lists .category-list>li.category-list-item{background:rgba(30,30,50,0.45);border-color:rgba(255,255,255,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.1)}[data-theme=dark] .category-lists .category-list-link{color:#e2e2f0 !important}[data-theme=dark] .category-lists .category-list-count{color:#a0a0c0 !important;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}[data-theme=dark] .category-lists .category-list-child .category-list-link{color:#a0a0c0 !important}</style><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Code Water" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">34</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">66</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p33.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">find：条件组合、-exec 两种写法与性能实战</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">find：条件组合、-exec 两种写法与性能实战</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-11T07:00:00.000Z" title="发表于 2026-07-11 15:00:00">2026-07-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-11T07:00:00.000Z" title="更新于 2026-07-11 15:00:00">2026-07-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/tools/">tools</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2.5k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>8分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>知道 <code>fd</code> 语法更直觉、速度更快，但 SSH 到一台没装第三方工具的服务器上，还是得翻出记忆里生锈的 <code>find</code> 语法。条件和动作到底谁写前面、<code>-mtime</code> 和 <code>-atime</code> 哪个是修改时间、<code>-exec</code> 后面跟的是 <code>\;</code> 还是 <code>+</code>——每次都要重新查一遍。</p>
+<p><code>find</code> 是所有 Linux 发行版都自带的工具，这篇把它自己的用法讲清楚。</p>
+<span id="more"></span>
+
+<p>这是 Linux 常见命令系列第三篇详细教程，承接 <a href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE">Linux 常见命令与工具地图</a>、<a href="/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98">chmod&#x2F;chown</a>、<a href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98">grep</a>。如果你的环境能装第三方工具，<a href="/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd">fd 语法比 find 直觉得多</a>——但装不上的场合，还得靠这篇。</p>
+<h2 id="基本语法：起始路径、条件、动作三段式"><a href="#基本语法：起始路径、条件、动作三段式" class="headerlink" title="基本语法：起始路径、条件、动作三段式"></a>基本语法：起始路径、条件、动作三段式</h2><p><code>find</code> 命令的结构是固定的三段：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find 起始路径 条件 动作</span><br></pre></td></tr></table></figure>
+
+<p>比如 <code>find . -name &quot;*.log&quot; -print</code>：<code>.</code> 是起始路径（从当前目录开始找），<code>-name &quot;*.log&quot;</code> 是条件（文件名匹配这个模式），<code>-print</code> 是动作（把匹配到的路径打印出来）。</p>
+<p>新手最容易搞混的地方是把条件和动作当成一回事。<code>-name</code>、<code>-type</code>、<code>-mtime</code> 这些是<strong>条件</strong>，负责”筛选出哪些文件符合要求”；<code>-print</code>、<code>-delete</code>、<code>-exec</code> 这些是<strong>动作</strong>，负责”对筛出来的文件做什么”。不写动作时 find 默认执行 <code>-print</code>，所以 <code>find . -name &quot;*.log&quot;</code> 和 <code>find . -name &quot;*.log&quot; -print</code> 效果一样——但显式写上 <code>-print</code>，尤其是命令里还有别的动作时，意图更清楚，不容易和条件搞混。</p>
+<h2 id="按名字和类型找：-name、-iname、-type"><a href="#按名字和类型找：-name、-iname、-type" class="headerlink" title="按名字和类型找：-name、-iname、-type"></a>按名字和类型找：-name、-iname、-type</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.log&quot;</span></span><br><span class="line"><span class="comment">#     -name：按文件名匹配，区分大小写，*.log 和 *.LOG 是两回事</span></span><br><span class="line"></span><br><span class="line">find . -iname <span class="string">&quot;*.log&quot;</span></span><br><span class="line"><span class="comment">#     -iname：和 -name 一样，但不区分大小写，access.log、ACCESS.LOG 都能匹配到</span></span><br><span class="line"></span><br><span class="line">find . -<span class="built_in">type</span> f -name <span class="string">&quot;*.go&quot;</span></span><br><span class="line"><span class="comment">#     -type f：只要普通文件，不要目录</span></span><br><span class="line"><span class="comment">#     -type d：只要目录</span></span><br><span class="line"><span class="comment">#     -type l：只要符号链接</span></span><br><span class="line"></span><br><span class="line">find . -maxdepth 2 -name <span class="string">&quot;*.md&quot;</span></span><br><span class="line"><span class="comment">#     -maxdepth：限制递归深度，2 表示最多进两层子目录，不会一路挖到底</span></span><br><span class="line"><span class="comment">#     忘加这个参数是 find 跑得慢、结果里混进一堆不相关文件的常见原因</span></span><br><span class="line"></span><br><span class="line">find . -mindepth 1 -maxdepth 1 -<span class="built_in">type</span> d</span><br><span class="line"><span class="comment">#     -mindepth 1：不包括起始路径本身，只要子级</span></span><br><span class="line"><span class="comment">#     配合 -maxdepth 1，效果就是&quot;只列出当前目录下的一级子目录&quot;，不递归</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="按时间找：-mtime、-atime、-ctime-的区别"><a href="#按时间找：-mtime、-atime、-ctime-的区别" class="headerlink" title="按时间找：-mtime、-atime、-ctime 的区别"></a>按时间找：-mtime、-atime、-ctime 的区别</h2><p>三个时间条件容易搞混，先说清楚各自对应什么：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>对应的时间戳</th>
+<th>什么情况下会变</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-mtime</code>（modify time）</td>
+<td>内容修改时间</td>
+<td>文件内容被写入&#x2F;修改</td>
+</tr>
+<tr>
+<td><code>-atime</code>（access time）</td>
+<td>访问时间</td>
+<td>文件被读取（有些文件系统挂载时禁用了 atime 更新，出于性能考虑）</td>
+</tr>
+<tr>
+<td><code>-ctime</code>（change time）</td>
+<td>状态变更时间</td>
+<td>文件的元数据变了——权限、属主、链接数，不一定是内容变了</td>
+</tr>
+</tbody></table>
+<p>日常排查用得最多的是 <code>-mtime</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">find . -mtime -7</span><br><span class="line"><span class="comment">#     -7：前面带减号，表示&quot;7 天以内&quot;（比 7 天新）</span></span><br><span class="line"><span class="comment">#     符号方向：- 是&quot;比这个数小&quot;，+ 是&quot;比这个数大&quot;，不带符号是&quot;精确等于这个数&quot;</span></span><br><span class="line"></span><br><span class="line">find /var/log -mtime +30 -name <span class="string">&quot;*.log&quot;</span></span><br><span class="line"><span class="comment">#     +30：30 天以前修改过的日志文件，排查该清理哪些旧日志时常用</span></span><br><span class="line"></span><br><span class="line">find . -newer reference.txt -name <span class="string">&quot;*.go&quot;</span></span><br><span class="line"><span class="comment">#     -newer：找修改时间比 reference.txt 更新的文件，不用自己算具体天数</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="按大小找：-size-的符号前缀"><a href="#按大小找：-size-的符号前缀" class="headerlink" title="按大小找：-size 的符号前缀"></a>按大小找：-size 的符号前缀</h2><p><code>-size</code> 的符号方向和 <code>-mtime</code> 是同一套逻辑，但因为单位是大小不是时间，容易理解反：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">find . -size +100M</span><br><span class="line"><span class="comment">#     +100M：大于 100MB 的文件，排查磁盘占用时常用</span></span><br><span class="line"></span><br><span class="line">find . -size -1k</span><br><span class="line"><span class="comment">#     -1k：小于 1KB 的文件，找空文件或者几乎是空的配置文件</span></span><br><span class="line"></span><br><span class="line">find . -size 0</span><br><span class="line"><span class="comment">#     不带符号：精确匹配大小为 0 的文件，找真正的空文件</span></span><br></pre></td></tr></table></figure>
+
+<p>单位后缀：<code>c</code> 是字节，<code>k</code> 是 KB，<code>M</code> 是 MB，<code>G</code> 是 GB，不写单位默认是 512 字节的块数（历史遗留，容易踩坑，写 size 条件时最好总是带上单位）。</p>
+<h2 id="逻辑组合：-and、-or、-not-与括号分组"><a href="#逻辑组合：-and、-or、-not-与括号分组" class="headerlink" title="逻辑组合：-and、-or、-not 与括号分组"></a>逻辑组合：-and、-or、-not 与括号分组</h2><p>多个条件之间默认是”且”的关系，<code>-and</code> 可以省略：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">find . -<span class="built_in">type</span> f -name <span class="string">&quot;*.go&quot;</span></span><br><span class="line"><span class="comment">#     等价于 find . -type f -and -name &quot;*.go&quot;，-and 默认存在，通常不用写</span></span><br><span class="line"></span><br><span class="line">find . -name <span class="string">&quot;*.go&quot;</span> -or -name <span class="string">&quot;*.md&quot;</span></span><br><span class="line"><span class="comment">#     -or：找 .go 或 .md 文件，这个必须显式写，不写就是 -and 的默认关系</span></span><br><span class="line"></span><br><span class="line">find . -not -path <span class="string">&quot;*/.git/*&quot;</span> -name <span class="string">&quot;*.go&quot;</span></span><br><span class="line"><span class="comment">#     -not：排除条件，这里是&quot;路径不包含 .git 目录&quot;且&quot;文件名匹配 .go&quot;</span></span><br><span class="line"></span><br><span class="line">find . \( -name <span class="string">&quot;*.go&quot;</span> -or -name <span class="string">&quot;*.md&quot;</span> \) -not -path <span class="string">&quot;*/.git/*&quot;</span></span><br><span class="line"><span class="comment">#     括号分组控制优先级，圆括号在 shell 里有特殊含义，必须转义成 \( \)</span></span><br><span class="line"><span class="comment">#     这条的意思是：(.go 或 .md 文件) 并且 不在 .git 目录下</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="exec-的两种写法：-和-，性能差在哪"><a href="#exec-的两种写法：-和-，性能差在哪" class="headerlink" title="-exec 的两种写法：\; 和 +，性能差在哪"></a><code>-exec</code> 的两种写法：<code>\;</code> 和 <code>+</code>，性能差在哪</h2><p>这是 find 里最容易被忽略、但影响最大的细节。两种写法看起来只差一个符号，行为和性能却完全不同：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.log&quot;</span> -<span class="built_in">exec</span> gzip &#123;&#125; \;</span><br><span class="line"><span class="comment">#     \; 结尾：每找到一个文件，就单独起一次 gzip 命令处理这一个文件</span></span><br><span class="line"><span class="comment">#     &#123;&#125; 是占位符，代表当前这个匹配到的文件路径</span></span><br><span class="line"></span><br><span class="line">find . -name <span class="string">&quot;*.log&quot;</span> -<span class="built_in">exec</span> gzip &#123;&#125; +</span><br><span class="line"><span class="comment">#     + 结尾：尽量把多个文件路径打包，一次性作为参数传给 gzip</span></span><br><span class="line"><span class="comment">#     行为类似 xargs——攒够一批（受命令行长度上限约束）就调用一次</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么性能差这么多</strong>：<code>\;</code> 结尾时，找到 1000 个文件，就要 fork 1000 次子进程、启动 1000 次 gzip——每次进程创建都有实打实的系统开销（内存分配、内核调度），文件越多，这个开销累加得越明显。<code>+</code> 结尾时，find 会把匹配到的文件路径尽量攒在一起，打包成尽可能少的调用次数，具体能攒多少受系统的 <code>ARG_MAX</code>（单次命令调用能传递的参数总长度上限）约束——Linux 上典型值是 2097152 字节（约 2MB，<code>getconf ARG_MAX</code> 能查到本机的实际值）。假设文件路径平均 50 字节，2MB 够装下四万多个路径，1000 个文件的路径总长度远小于这个上限，实际可能一次调用就打包完了，进程创建次数从”文件数”级别降到”个位数”，量级差出去很多。</p>
+<p>日常写脚本的经验规则：只要命令支持一次接收多个文件路径（大多数命令都支持，比如 <code>rm</code>、<code>gzip</code>、<code>chmod</code>），优先用 <code>+</code>；只有命令一次只能处理一个文件、或者每个文件需要单独判断结果时，才用 <code>\;</code>。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.tmp&quot;</span> -<span class="built_in">exec</span> <span class="built_in">rm</span> &#123;&#125; +</span><br><span class="line"><span class="comment">#     批量删除 .tmp 文件，用 + 一次调用处理完，比 \; 快得多</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="delete：比-exec-rm-更安全高效"><a href="#delete：比-exec-rm-更安全高效" class="headerlink" title="-delete：比 -exec rm 更安全高效"></a><code>-delete</code>：比 <code>-exec rm</code> 更安全高效</h2><p>需要删除匹配到的文件时，<code>find</code> 自带的 <code>-delete</code> 动作比 <code>-exec rm &#123;&#125; +</code> 更直接——不用再额外 fork 一个 <code>rm</code> 进程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.tmp&quot;</span> -delete</span><br><span class="line"><span class="comment">#     -delete：直接删除匹配到的文件，不需要再调用外部 rm 命令</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>用之前一定要先确认范围</strong>：把 <code>-delete</code> 换成 <code>-print</code>，跑一遍看看到底会命中哪些文件，确认没问题了再换回 <code>-delete</code>——<code>find</code> 的条件写错很容易命中比预期更大的范围，删除操作又无法撤销：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.tmp&quot;</span> -<span class="built_in">print</span></span><br><span class="line"><span class="comment">#     先跑这条确认命中范围，看着输出结果没问题</span></span><br><span class="line">find . -name <span class="string">&quot;*.tmp&quot;</span> -delete</span><br><span class="line"><span class="comment">#     确认没问题后再换成 -delete 真正执行</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="两个常见坑：文件名带空格、通配符被-shell-提前展开"><a href="#两个常见坑：文件名带空格、通配符被-shell-提前展开" class="headerlink" title="两个常见坑：文件名带空格、通配符被 shell 提前展开"></a>两个常见坑：文件名带空格、通配符被 shell 提前展开</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.txt&quot;</span> -print0 | xargs -0 <span class="built_in">rm</span></span><br><span class="line"><span class="comment">#     -print0：文件名之间用 null 字符（\0）分隔，而不是换行或空格</span></span><br><span class="line"><span class="comment">#     xargs -0：配合读取 null 分隔的输入</span></span><br><span class="line"><span class="comment">#     文件名里带空格（比如 &quot;my file.txt&quot;）时，普通的换行分隔会被 xargs 误判成两个参数，</span></span><br><span class="line"><span class="comment">#     null 分隔是唯一不会出现在合法文件名里的字符，能保证安全</span></span><br><span class="line"></span><br><span class="line">find . -name *.txt</span><br><span class="line"><span class="comment">#     危险写法：*.txt 没加引号，如果当前目录下已经有匹配 *.txt 的文件，</span></span><br><span class="line"><span class="comment">#     shell 会在 find 执行前就把通配符展开成具体文件名，find 实际收到的</span></span><br><span class="line"><span class="comment">#     是一堆文件名而不是模式字符串，只会在这些文件里精确匹配，行为完全不对</span></span><br><span class="line"></span><br><span class="line">find . -name <span class="string">&quot;*.txt&quot;</span></span><br><span class="line"><span class="comment">#     正确写法：加引号，让 *.txt 原样传给 find，由 find 自己去做模式匹配</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="find-常用参数速查表"><a href="#find-常用参数速查表" class="headerlink" title="find 常用参数速查表"></a>find 常用参数速查表</h2><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-name PATTERN</code></td>
+<td>按文件名匹配，区分大小写</td>
+</tr>
+<tr>
+<td><code>-iname PATTERN</code></td>
+<td>按文件名匹配，不区分大小写</td>
+</tr>
+<tr>
+<td><code>-type f</code> &#x2F; <code>d</code> &#x2F; <code>l</code></td>
+<td>只要普通文件 &#x2F; 目录 &#x2F; 符号链接</td>
+</tr>
+<tr>
+<td><code>-maxdepth N</code></td>
+<td>最多递归 N 层</td>
+</tr>
+<tr>
+<td><code>-mindepth N</code></td>
+<td>至少从第 N 层开始算</td>
+</tr>
+<tr>
+<td><code>-mtime ±N</code></td>
+<td>内容修改时间在 N 天以内（<code>-</code>）&#x2F; 以前（<code>+</code>）&#x2F; 精确 N 天（不带符号）</td>
+</tr>
+<tr>
+<td><code>-atime ±N</code></td>
+<td>访问时间，符号规则同 <code>-mtime</code></td>
+</tr>
+<tr>
+<td><code>-ctime ±N</code></td>
+<td>元数据（权限&#x2F;属主）变更时间，符号规则同 <code>-mtime</code></td>
+</tr>
+<tr>
+<td><code>-newer FILE</code></td>
+<td>修改时间比 FILE 更新</td>
+</tr>
+<tr>
+<td><code>-size ±N[ckMG]</code></td>
+<td>文件大小，符号规则同 <code>-mtime</code>，单位 c&#x2F;k&#x2F;M&#x2F;G</td>
+</tr>
+<tr>
+<td><code>-and</code></td>
+<td>且，默认关系，通常省略</td>
+</tr>
+<tr>
+<td><code>-or</code></td>
+<td>或，必须显式写</td>
+</tr>
+<tr>
+<td><code>-not</code></td>
+<td>非，排除条件</td>
+</tr>
+<tr>
+<td><code>\( ... \)</code></td>
+<td>括号分组，圆括号需转义</td>
+</tr>
+<tr>
+<td><code>-exec CMD &#123;&#125; \;</code></td>
+<td>对每个匹配文件单独执行一次命令</td>
+</tr>
+<tr>
+<td><code>-exec CMD &#123;&#125; +</code></td>
+<td>尽量批量打包，减少命令调用次数</td>
+</tr>
+<tr>
+<td><code>-delete</code></td>
+<td>直接删除匹配到的文件</td>
+</tr>
+<tr>
+<td><code>-print0</code></td>
+<td>用 null 字符分隔输出，配合 <code>xargs -0</code> 处理带空格的文件名</td>
+</tr>
+</tbody></table>
+<h2 id="find-之外"><a href="#find-之外" class="headerlink" title="find 之外"></a>find 之外</h2><p>装得上第三方工具的话，<a href="/%E7%BB%88%E7%AB%AF%E6%90%9C%E7%B4%A2%E4%B8%89%E4%BB%B6%E5%A5%97-fzf-ripgrep-fd">fd</a> 默认行为更符合直觉（自动跳过 <code>.gitignore</code>、语法更接近自然语言），日常开发优先用它，<code>find</code> 留给装不上工具的场合。Linux 命令系列下一篇计划写 <code>rsync</code> 或 <code>tar</code>——都是比 <code>find</code> 参数量级还大的命令，增量同步、归档压缩各有一堆细节值得展开。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/">https://blog.codewater.top/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Linux/">Linux</a><a class="post-meta__tags" href="/tags/%E5%91%BD%E4%BB%A4%E8%A1%8C/">命令行</a><a class="post-meta__tags" href="/tags/find/">find</a></div><div class="post-share"><div class="social-share" data-image="/img/p33.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98/" title="grep：正则匹配、上下文控制与 -E/-P 实战"><img class="cover" src="/img/p32.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">grep：正则匹配、上下文控制与 -E/-P 实战</div></div><div class="info-2"><div class="info-item-1">grep 的 BRE/-E/-P 三种正则模式区别在哪、-A/-B/-C 上下文控制怎么用、配合 xargs 批量处理匹配文件，一篇讲清楚原生 grep。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img class="cover" src="/img/p30.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-09</div><div class="info-item-2">Linux 常见命令与工具地图(备忘录)</div></div><div class="info-2"><div class="info-item-1">按场景分类的 Linux 命令速查地图：文件、文本处理、进程、网络、权限、包管理、压缩传输、Git，每条一句话说明用途，配合详细文章深入用法。</div></div></div></a><a class="pagination-related" href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98/" title="grep：正则匹配、上下文控制与 -E&#x2F;-P 实战"><img class="cover" src="/img/p32.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">grep：正则匹配、上下文控制与 -E&#x2F;-P 实战</div></div><div class="info-2"><div class="info-item-1">grep 的 BRE/-E/-P 三种正则模式区别在哪、-A/-B/-C 上下文控制怎么用、配合 xargs 批量处理匹配文件，一篇讲清楚原生 grep。</div></div></div></a><a class="pagination-related" href="/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/" title="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战"><img class="cover" src="/img/p31.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战</div></div><div class="info-2"><div class="info-item-1">chmod 数字模式怎么算、符号模式何时更好用、setuid/setgid/sticky bit 到底在干嘛，配合 chown 修一个权限乱掉的部署目录。</div></div></div></a><a class="pagination-related" href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/" title="Linux 服务器问题排查：端口、进程、日志常用命令速查"><img class="cover" src="/img/p22.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">Linux 服务器问题排查：端口、进程、日志常用命令速查</div></div><div class="info-2"><div class="info-item-1">Linux 服务器问题排查常用命令速查：ss/lsof 查端口占用，ps/top 看进程状态，systemctl/journalctl 管理服务和查日志，curl/dig 测网络连通，df/du/free 看磁盘内存，附完整排查流程。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">34</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">66</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9F%BA%E6%9C%AC%E8%AF%AD%E6%B3%95%EF%BC%9A%E8%B5%B7%E5%A7%8B%E8%B7%AF%E5%BE%84%E3%80%81%E6%9D%A1%E4%BB%B6%E3%80%81%E5%8A%A8%E4%BD%9C%E4%B8%89%E6%AE%B5%E5%BC%8F"><span class="toc-number">1.</span> <span class="toc-text">基本语法：起始路径、条件、动作三段式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8C%89%E5%90%8D%E5%AD%97%E5%92%8C%E7%B1%BB%E5%9E%8B%E6%89%BE%EF%BC%9A-name%E3%80%81-iname%E3%80%81-type"><span class="toc-number">2.</span> <span class="toc-text">按名字和类型找：-name、-iname、-type</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8C%89%E6%97%B6%E9%97%B4%E6%89%BE%EF%BC%9A-mtime%E3%80%81-atime%E3%80%81-ctime-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">3.</span> <span class="toc-text">按时间找：-mtime、-atime、-ctime 的区别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8C%89%E5%A4%A7%E5%B0%8F%E6%89%BE%EF%BC%9A-size-%E7%9A%84%E7%AC%A6%E5%8F%B7%E5%89%8D%E7%BC%80"><span class="toc-number">4.</span> <span class="toc-text">按大小找：-size 的符号前缀</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%80%BB%E8%BE%91%E7%BB%84%E5%90%88%EF%BC%9A-and%E3%80%81-or%E3%80%81-not-%E4%B8%8E%E6%8B%AC%E5%8F%B7%E5%88%86%E7%BB%84"><span class="toc-number">5.</span> <span class="toc-text">逻辑组合：-and、-or、-not 与括号分组</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#exec-%E7%9A%84%E4%B8%A4%E7%A7%8D%E5%86%99%E6%B3%95%EF%BC%9A-%E5%92%8C-%EF%BC%8C%E6%80%A7%E8%83%BD%E5%B7%AE%E5%9C%A8%E5%93%AA"><span class="toc-number">6.</span> <span class="toc-text">-exec 的两种写法：\; 和 +，性能差在哪</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#delete%EF%BC%9A%E6%AF%94-exec-rm-%E6%9B%B4%E5%AE%89%E5%85%A8%E9%AB%98%E6%95%88"><span class="toc-number">7.</span> <span class="toc-text">-delete：比 -exec rm 更安全高效</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%A4%E4%B8%AA%E5%B8%B8%E8%A7%81%E5%9D%91%EF%BC%9A%E6%96%87%E4%BB%B6%E5%90%8D%E5%B8%A6%E7%A9%BA%E6%A0%BC%E3%80%81%E9%80%9A%E9%85%8D%E7%AC%A6%E8%A2%AB-shell-%E6%8F%90%E5%89%8D%E5%B1%95%E5%BC%80"><span class="toc-number">8.</span> <span class="toc-text">两个常见坑：文件名带空格、通配符被 shell 提前展开</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#find-%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">9.</span> <span class="toc-text">find 常用参数速查表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#find-%E4%B9%8B%E5%A4%96"><span class="toc-number">10.</span> <span class="toc-text">find 之外</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/" title="find：条件组合、-exec 两种写法与性能实战"><img src="/img/p33.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="find：条件组合、-exec 两种写法与性能实战"/></a><div class="content"><a class="title" href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/" title="find：条件组合、-exec 两种写法与性能实战">find：条件组合、-exec 两种写法与性能实战</a><time datetime="2026-07-11T07:00:00.000Z" title="发表于 2026-07-11 15:00:00">2026-07-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98/" title="grep：正则匹配、上下文控制与 -E/-P 实战"><img src="/img/p32.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="grep：正则匹配、上下文控制与 -E/-P 实战"/></a><div class="content"><a class="title" href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98/" title="grep：正则匹配、上下文控制与 -E/-P 实战">grep：正则匹配、上下文控制与 -E/-P 实战</a><time datetime="2026-07-11T02:00:00.000Z" title="发表于 2026-07-11 10:00:00">2026-07-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/" title="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战"><img src="/img/p31.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战"/></a><div class="content"><a class="title" href="/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/" title="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战">Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战</a><time datetime="2026-07-10T02:00:00.000Z" title="发表于 2026-07-10 10:00:00">2026-07-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img src="/img/p30.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Linux 常见命令与工具地图(备忘录)"/></a><div class="content"><a class="title" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)">Linux 常见命令与工具地图(备忘录)</a><time datetime="2026-07-09T09:00:00.000Z" title="发表于 2026-07-09 17:00:00">2026-07-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E7%BB%99Claude-Code%E6%8E%A5%E5%85%A5%E5%A4%96%E9%83%A8%E8%AE%B0%E5%BF%86%E7%B3%BB%E7%BB%9F/" title="给 Claude Code 接入外部记忆系统：新会话不再失忆"><img src="/img/p29.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="给 Claude Code 接入外部记忆系统：新会话不再失忆"/></a><div class="content"><a class="title" href="/%E7%BB%99Claude-Code%E6%8E%A5%E5%85%A5%E5%A4%96%E9%83%A8%E8%AE%B0%E5%BF%86%E7%B3%BB%E7%BB%9F/" title="给 Claude Code 接入外部记忆系统：新会话不再失忆">给 Claude Code 接入外部记忆系统：新会话不再失忆</a><time datetime="2026-07-09T07:00:00.000Z" title="发表于 2026-07-09 15:00:00">2026-07-09</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script>function injectCategoryDesc(){var el=document.querySelector('.category-lists');if(!el||el.nextElementSibling&&el.nextElementSibling.id==='cat-desc')return;var desc=document.createElement('div');desc.id='cat-desc';desc.style.cssText='margin-top:28px;padding:20px 24px;background:rgba(255,255,255,0.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.45);border-radius:14px;';desc.innerHTML='<h3 style="margin:0 0 14px;font-size:.95rem;font-weight:700;color:#3b3b5c;">各分类说明</h3><table style="width:100%;border-collapse:collapse;font-size:.875rem;"><tbody><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">tools</td><td style="padding:8px 12px;color:#5a5a7a;">工具链系列，覆盖终端、Shell、搜索、文件管理、Git TUI、编辑器等；也包含 tldr、git tag 等命令速查</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">golang</td><td style="padding:8px 12px;color:#5a5a7a;">Go 后端实战：常见业务问题解决方案实现</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">git</td><td style="padding:8px 12px;color:#5a5a7a;">Git 常见使用方式以及操作技巧</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">ai</td><td style="padding:8px 12px;color:#5a5a7a;"> ai 相关使用和分享</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">cursor</td><td style="padding:8px 12px;color:#5a5a7a;">Cursor 编辑器：使用场景和难点</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">Hexo</td><td style="padding:8px 12px;color:#5a5a7a;">hexo 搭建博客的常见配置技巧</td></tr><tr><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">problem</td><td style="padding:8px 12px;color:#5a5a7a;">记录各种问题报错的排查过程</td></tr></tbody></table>';el.after(desc);}document.addEventListener('DOMContentLoaded',injectCategoryDesc);document.addEventListener('pjax:complete',injectCategoryDesc);</script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>
