@@ -1,0 +1,563 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件 | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="管道的本质是什么、为什么有些命令吃 stdin 有些只认参数、xargs 怎么架桥，以及背后支撑整个 Linux 命令行的 Unix 设计哲学。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件">
+<meta property="og:url" content="https://blog.codewater.top/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="管道的本质是什么、为什么有些命令吃 stdin 有些只认参数、xargs 怎么架桥，以及背后支撑整个 Linux 命令行的 Unix 设计哲学。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p36.jpg">
+<meta property="article:published_time" content="2026-07-12T08:52:33.000Z">
+<meta property="article:modified_time" content="2026-07-12T08:52:33.000Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="CLI">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="命令行">
+<meta property="article:tag" content="xargs">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p36.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件",
+  "url": "https://blog.codewater.top/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/",
+  "image": "https://blog.codewater.top/img/p36.jpg",
+  "datePublished": "2026-07-12T08:52:33.000Z",
+  "dateModified": "2026-07-12T08:52:33.000Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><style>.category-lists{background:linear-gradient(135deg,#667eea55,#f5576c44,#4facfe44,#43e97b44);border-radius:20px;padding:28px !important;position:relative;overflow:hidden}.category-lists::before{content:'';position:absolute;top:-80px;left:-80px;width:240px;height:240px;background:radial-gradient(circle,#a78bfa88,transparent 70%);border-radius:50%;pointer-events:none}.category-lists::after{content:'';position:absolute;bottom:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,#f9a8d488,transparent 70%);border-radius:50%;pointer-events:none}.category-lists .category-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;padding:0 !important;list-style:none !important;margin:0 !important;position:relative;z-index:1}.category-lists .category-list>li.category-list-item{background:rgba(255,255,255,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.55);border-radius:14px;padding:22px 20px 18px;margin:0 !important;box-shadow:0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.7);transition:transform .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}.category-lists .category-list>li.category-list-item::before{display:none !important}.category-lists .category-list>li.category-list-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.7)}.category-lists .category-list-link{font-size:1rem;font-weight:700;color:#3b3b5c !important;display:block;margin-bottom:10px;line-height:1.3}.category-lists .category-list-count{display:inline-block;font-size:.78rem;font-weight:600;color:#5a5a7a !important;background:rgba(255,255,255,0.5);padding:2px 10px;border-radius:20px;margin-left:0 !important;border:1px solid rgba(255,255,255,0.7)}.category-lists .category-list-count::before,.category-lists .category-list-count::after{content:'' !important}.category-lists .category-list-child{margin-top:10px;padding:10px 0 0 0 !important;border-top:1px solid rgba(255,255,255,0.4) !important;list-style:none !important}.category-lists .category-list-child li.category-list-item{margin:5px 0 !important;padding:0 !important}.category-lists .category-list-child li.category-list-item::before{display:none !important}.category-lists .category-list-child .category-list-link{font-size:.82rem;font-weight:400;color:#5a5a7a !important;margin-bottom:0}.category-lists .category-list-child .category-list-count{font-size:.7rem;padding:1px 7px}[data-theme=dark] .category-lists .category-list>li.category-list-item{background:rgba(30,30,50,0.45);border-color:rgba(255,255,255,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.1)}[data-theme=dark] .category-lists .category-list-link{color:#e2e2f0 !important}[data-theme=dark] .category-lists .category-list-count{color:#a0a0c0 !important;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}[data-theme=dark] .category-lists .category-list-child .category-list-link{color:#a0a0c0 !important}</style><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Code Water" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">69</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p36.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-12T08:52:33.000Z" title="发表于 2026-07-12 16:52:33">2026-07-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-12T08:52:33.000Z" title="更新于 2026-07-12 16:52:33">2026-07-12</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/tools/">tools</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2.2k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>7分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p><code>find . -name &quot;*.log&quot; | rm</code> 这条命令，直觉上应该是”找到所有 .log 文件，然后删掉”。实际跑一下：什么都不会发生，一个文件都删不掉，<code>rm</code> 也不会报任何错。</p>
+<p>管道明明把 <code>find</code> 的结果传给了 <code>rm</code>，为什么 <code>rm</code> 完全不理会？这篇讲清楚背后的原因，以及支撑整个 Linux 命令行生态的设计哲学。</p>
+<span id="more"></span>
+
+<p>这是 Linux 命令系列的第六篇，承接 <a href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE">Linux 常见命令与工具地图</a>、<a href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98">grep</a>、<a href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98">find</a>、<a href="/tar-zip-unzip%E5%BD%92%E6%A1%A3%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%B8%B8%E8%A7%81%E5%9D%91%E5%AE%9E%E6%88%98">tar&#x2F;zip&#x2F;unzip</a>，以及姐妹篇 <a href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A">Linux 命令行选项设计约定</a>——上一篇讲的是怎么给单个命令传参数，这篇讲怎么把多个命令组合起来干活。</p>
+<h2 id="管道的本质：把一个命令的输出接成另一个命令的输入"><a href="#管道的本质：把一个命令的输出接成另一个命令的输入" class="headerlink" title="管道的本质：把一个命令的输出接成另一个命令的输入"></a>管道的本质：把一个命令的输出接成另一个命令的输入</h2><p>管道符 <code>|</code> 做的事情很纯粹：把左边命令的标准输出（stdout）直接接到右边命令的标准输入（stdin）。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ls</span> | grep <span class="string">&quot;.md&quot;</span></span><br><span class="line"><span class="comment">#     ls 把当前目录的文件列表写到 stdout</span></span><br><span class="line"><span class="comment">#     | 把这份输出原样接到 grep 的 stdin</span></span><br><span class="line"><span class="comment">#     grep 从 stdin 读入这份列表，从中过滤出包含 .md 的行</span></span><br></pre></td></tr></table></figure>
+
+<p>两个命令互相不知道对方的存在——<code>ls</code> 不知道自己的输出被谁读走了，<code>grep</code> 也不关心这些文本行是 <code>ls</code> 生成的还是别的什么命令生成的。它们唯一的约定是：数据以纯文本的形式流动。这个”互不知情、只认文本”的设计，正是管道能随意串联任意命令的原因。</p>
+<h2 id="关键区分：谁读-stdin，谁只认命令行参数"><a href="#关键区分：谁读-stdin，谁只认命令行参数" class="headerlink" title="关键区分：谁读 stdin，谁只认命令行参数"></a>关键区分：谁读 stdin，谁只认命令行参数</h2><p>回到开头的问题：<code>find . -name &quot;*.log&quot; | rm</code> 为什么删不掉文件？</p>
+<p>答案是：<code>rm</code> 根本不读 stdin。管道确实把 <code>find</code> 的结果传了过去，但 <code>rm</code> 压根没有”从标准输入读取要删除的文件列表”这个功能——它只认命令行参数，比如 <code>rm file1.log file2.log</code>。管道传过去的内容,<code>rm</code> 收到了也不会看，它只会检查自己的命令行参数里有没有文件名，没有就什么都不干、正常退出。</p>
+<p>Linux 命令大致能分两类：</p>
+<ul>
+<li><strong>过滤器类命令</strong>：默认从 stdin 读取数据，处理后写到 stdout，天生适合接在管道里。<code>cat</code>、<code>grep</code>、<code>sed</code>、<code>wc</code>、<code>sort</code> 都是这一类</li>
+<li><strong>操作型命令</strong>：只认命令行参数，不读 stdin，因为它们的设计目的是”对指定的东西做一次性操作”，不是”处理一批流式数据”。<code>rm</code>、<code>chmod</code>、<code>mkdir</code>、<code>cp</code> 都是这一类</li>
+</ul>
+<p>这个区分不是随意的——<code>rm</code> 删文件、<code>chmod</code> 改权限，这类操作要的是明确的目标列表，命令行参数比一份不确定长度的流式数据更适合表达”目标是谁”。</p>
+<h2 id="xargs-的意义：把-stdin-转换成命令行参数"><a href="#xargs-的意义：把-stdin-转换成命令行参数" class="headerlink" title="xargs 的意义：把 stdin 转换成命令行参数"></a>xargs 的意义：把 stdin 转换成命令行参数</h2><p><code>xargs</code> 存在的目的就是补上这个断层——把 stdin 里的内容转换成命令行参数，喂给那些只认参数的命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.log&quot;</span> | xargs <span class="built_in">rm</span></span><br><span class="line"><span class="comment">#     find 把匹配到的文件路径列表写到 stdout</span></span><br><span class="line"><span class="comment">#     xargs 从 stdin 读进这份列表，转换成 rm 的命令行参数</span></span><br><span class="line"><span class="comment">#     实际执行的是 rm file1.log file2.log file3.log ...</span></span><br></pre></td></tr></table></figure>
+
+<p>同样的管道，中间插一个 <code>xargs</code>，语义就通了：<code>xargs</code> 把”过滤器类命令的输出”转换成”操作型命令能理解的参数”，架起两类命令之间的桥。</p>
+<h2 id="xargs-核心参数"><a href="#xargs-核心参数" class="headerlink" title="xargs 核心参数"></a>xargs 核心参数</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.tmp&quot;</span> | xargs -n 5 <span class="built_in">rm</span></span><br><span class="line"><span class="comment">#     -n：每次调用命令时最多传几个参数，这里是每 5 个文件调一次 rm</span></span><br><span class="line"><span class="comment">#     不写 -n 的话，xargs 会尽量把所有参数塞进一次调用（受系统 ARG_MAX 限制）</span></span><br><span class="line"></span><br><span class="line">find . -name <span class="string">&quot;*.log&quot;</span> | xargs -I &#123;&#125; <span class="built_in">mv</span> &#123;&#125; /backup/</span><br><span class="line"><span class="comment">#     -I：自定义占位符，&#123;&#125; 代表 xargs 传进来的每一项</span></span><br><span class="line"><span class="comment">#     用 -I 之后参数位置更灵活，能把参数插到命令中间而不是只能接在最后</span></span><br><span class="line"></span><br><span class="line">find . -name <span class="string">&quot;*.log&quot;</span> -print0 | xargs -0 <span class="built_in">rm</span></span><br><span class="line"><span class="comment">#     -0：配合 find 的 -print0 使用，用 null 字符分隔文件名而不是空格/换行</span></span><br><span class="line"><span class="comment">#     这个组合专门解决文件名里带空格的问题，前两篇 grep 和 find 文章里都提到过它</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="xargs-P：容易被忽略的并行执行"><a href="#xargs-P：容易被忽略的并行执行" class="headerlink" title="xargs -P：容易被忽略的并行执行"></a>xargs -P：容易被忽略的并行执行</h2><p><code>xargs</code> 默认是串行的——一个一个调用命令，等上一个执行完再执行下一个。<code>-P</code> 可以指定并行度：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.jpg&quot;</span> | xargs -P 4 -n 1 convert -resize 50%</span><br><span class="line"><span class="comment">#     -P 4：最多同时跑 4 个进程</span></span><br><span class="line"><span class="comment">#     -n 1：每个进程只处理 1 个文件，这样才有 4 个独立任务可以并行</span></span><br></pre></td></tr></table></figure>
+
+<p><code>-P</code> 有个容易踩的坑：它必须配合 <code>-n</code> 一起用，否则很可能不起作用——<code>xargs</code> 默认会把所有参数尽量塞进一次调用（一次 <code>rm file1 file2 file3 ...</code>），只有一次调用，<code>-P</code> 再高也没有第二个进程可以并行。想让并行真正生效，得先用 <code>-n</code> 把参数拆成多次独立调用，<code>-P</code> 才有事可做。</p>
+<h2 id="xargs-常用参数速查表"><a href="#xargs-常用参数速查表" class="headerlink" title="xargs 常用参数速查表"></a>xargs 常用参数速查表</h2><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-n NUM</code></td>
+<td>每次调用命令时最多传 NUM 个参数，不写则尽量一次塞满（受 <code>ARG_MAX</code> 限制）</td>
+</tr>
+<tr>
+<td><code>-I REPLACE</code></td>
+<td>自定义占位符，可以把参数插到命令中间而不是只能接在最后</td>
+</tr>
+<tr>
+<td><code>-0</code></td>
+<td>用 null 字符分隔输入项，配合 <code>find -print0</code> 处理带空格的文件名</td>
+</tr>
+<tr>
+<td><code>-P NUM</code></td>
+<td>最多同时跑 NUM 个进程，默认是 1（串行）；必须配合 <code>-n</code> 才能真正并行</td>
+</tr>
+<tr>
+<td><code>-t</code></td>
+<td>执行前先把实际要跑的命令打印出来，调试危险操作时先加这个看一眼</td>
+</tr>
+<tr>
+<td><code>-p</code></td>
+<td>每次执行前都询问确认，比 <code>-t</code> 更保守，确认了才真正执行</td>
+</tr>
+</tbody></table>
+<h2 id="xargs-和-find-exec-的对比"><a href="#xargs-和-find-exec-的对比" class="headerlink" title="xargs 和 find -exec 的对比"></a>xargs 和 find -exec 的对比</h2><p><a href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98">上一篇 find 文章</a>里讲过 <code>-exec</code> 的两种写法（<code>\;</code> 和 <code>+</code>），做的事情和 <code>xargs</code> 很像——都是”把找到的东西喂给下一个命令”。两者的区别：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">find . -name <span class="string">&quot;*.log&quot;</span> -<span class="built_in">exec</span> <span class="built_in">rm</span> &#123;&#125; +</span><br><span class="line"><span class="comment">#     -exec 内建在 find 里，只服务 find 自己找到的结果</span></span><br><span class="line"></span><br><span class="line">find . -name <span class="string">&quot;*.log&quot;</span> | xargs <span class="built_in">rm</span></span><br><span class="line"><span class="comment">#     xargs 是独立命令，管道前面可以是 find，也可以是 grep -l、ls，或者任何产生一行行文本的命令</span></span><br></pre></td></tr></table></figure>
+
+<p><code>-exec</code> 是 <code>find</code> 自带的能力，用起来更直接，但只能配合 <code>find</code>。<code>xargs</code> 是通用工具，任何命令的输出只要能通过管道传过来，都能配合 <code>xargs</code> 转换成参数——适用范围更广。日常写 <code>find ... -exec</code> 就够用的场景不用特意换成 <code>xargs</code>，但如果数据来源不是 <code>find</code>（比如 <code>grep -l ... | xargs</code>），就只能用 <code>xargs</code>。</p>
+<h2 id="Unix-设计哲学落地：小工具、文本接口、自由组合"><a href="#Unix-设计哲学落地：小工具、文本接口、自由组合" class="headerlink" title="Unix 设计哲学落地：小工具、文本接口、自由组合"></a>Unix 设计哲学落地：小工具、文本接口、自由组合</h2><p>前面这些具体机制，背后有一套统一的设计思想。1978 年，Unix 管道的发明者 Doug McIlroy 在 <em>Bell System Technical Journal</em> 上把这套思想总结成三句话：</p>
+<blockquote>
+<p>Write programs that do one thing and do it well. Write programs to work together. Write programs to handle text streams, because that is a universal interface.</p>
+<p>写只做一件事、并且做好这一件事的程序；写能相互协作的程序；写能处理文本流的程序，因为文本流是通用接口。</p>
+</blockquote>
+<p>这三句话直接对应本文讲的内容：</p>
+<ul>
+<li><strong>只做一件事</strong>：<code>grep</code> 只管过滤文本，<code>rm</code> 只管删文件，没有哪个命令试图把所有功能都塞进自己</li>
+<li><strong>相互协作</strong>：靠管道把小工具串起来，而不是靠一个大程序内置所有功能</li>
+<li><strong>文本作为通用接口</strong>：不管是 <code>ls</code> 的输出还是 <code>grep</code> 的输出，都是纯文本，任何命令都能读懂任何命令的输出——这正是管道能随意组合任意命令的前提</li>
+</ul>
+<p>这和图形界面软件的设计思路是相反的：图形应用倾向于把功能都装进一个软件里，命令行工具则倾向于拆成几十个只做一件事的小程序，需要什么功能现场用管道拼起来。前者上手快，后者组合起来的灵活度是图形界面很难达到的——今天学的这几个命令，明天可以用完全没预料到的方式重新拼装解决新问题。</p>
+<h2 id="Linux-命令系列：走到这里"><a href="#Linux-命令系列：走到这里" class="headerlink" title="Linux 命令系列：走到这里"></a>Linux 命令系列：走到这里</h2><p>这个系列从具体命令讲到了设计哲学：<a href="/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98">chmod&#x2F;chown</a> 管权限，<a href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98">grep</a> 管文本搜索，<a href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98">find</a> 管文件查找，<a href="/tar-zip-unzip%E5%BD%92%E6%A1%A3%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%B8%B8%E8%A7%81%E5%9D%91%E5%AE%9E%E6%88%98">tar&#x2F;zip&#x2F;unzip</a> 管归档压缩，<a href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A">命令行选项设计约定</a> 讲怎么给命令传参数，这篇讲怎么把命令组合起来。后续候选话题还有 <code>rsync</code> 的增量同步和包管理命令，写完再回来更新 <a href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE">Linux 常见命令与工具地图</a>。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/">https://blog.codewater.top/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/CLI/">CLI</a><a class="post-meta__tags" href="/tags/Linux/">Linux</a><a class="post-meta__tags" href="/tags/%E5%91%BD%E4%BB%A4%E8%A1%8C/">命令行</a><a class="post-meta__tags" href="/tags/xargs/">xargs</a></div><div class="post-share"><div class="social-share" data-image="/img/p36.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"><img class="cover" src="/img/p35.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定</div></div><div class="info-2"><div class="info-item-1">短选项和长选项是什么关系、为什么 grep -v 和 node -v 意思完全不同、-- 怎么用，讲清楚 Linux 命令行选项背后没有强制标准的设计约定。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"><img class="cover" src="/img/p35.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定</div></div><div class="info-2"><div class="info-item-1">短选项和长选项是什么关系、为什么 grep -v 和 node -v 意思完全不同、-- 怎么用，讲清楚 Linux 命令行选项背后没有强制标准的设计约定。</div></div></div></a><a class="pagination-related" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img class="cover" src="/img/p30.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-09</div><div class="info-item-2">Linux 常见命令与工具地图(备忘录)</div></div><div class="info-2"><div class="info-item-1">按场景分类的 Linux 命令速查地图：文件、文本处理、进程、网络、权限、包管理、压缩传输、Git，每条一句话说明用途，配合详细文章深入用法。</div></div></div></a><a class="pagination-related" href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/" title="find：条件组合、-exec 两种写法与性能实战"><img class="cover" src="/img/p33.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">find：条件组合、-exec 两种写法与性能实战</div></div><div class="info-2"><div class="info-item-1">find 的条件与动作怎么分、-mtime/-size 符号方向、-exec 用 \; 和 + 性能差在哪，一篇讲清楚原生 find 的实战用法。</div></div></div></a><a class="pagination-related" href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/" title="Linux 服务器问题排查：端口、进程、日志常用命令速查"><img class="cover" src="/img/p22.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">Linux 服务器问题排查：端口、进程、日志常用命令速查</div></div><div class="info-2"><div class="info-item-1">Linux 服务器问题排查常用命令速查：ss/lsof 查端口占用，ps/top 看进程状态，systemctl/journalctl 管理服务和查日志，curl/dig 测网络连通，df/du/free 看磁盘内存，附完整排查流程。</div></div></div></a><a class="pagination-related" href="/Linux%E6%9D%83%E9%99%90%E4%B8%8E%E5%B1%9E%E4%B8%BB%E7%AE%A1%E7%90%86-chmod-chown%E5%AE%9E%E6%88%98/" title="Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战"><img class="cover" src="/img/p31.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">Linux 权限与属主管理：chmod、chown 从数字模式到特殊权限位实战</div></div><div class="info-2"><div class="info-item-1">chmod 数字模式怎么算、符号模式何时更好用、setuid/setgid/sticky bit 到底在干嘛，配合 chown 修一个权限乱掉的部署目录。</div></div></div></a><a class="pagination-related" href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98/" title="grep：正则匹配、上下文控制与 -E&#x2F;-P 实战"><img class="cover" src="/img/p32.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">grep：正则匹配、上下文控制与 -E&#x2F;-P 实战</div></div><div class="info-2"><div class="info-item-1">grep 的 BRE/-E/-P 三种正则模式区别在哪、-A/-B/-C 上下文控制怎么用、配合 xargs 批量处理匹配文件，一篇讲清楚原生 grep。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">69</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AE%A1%E9%81%93%E7%9A%84%E6%9C%AC%E8%B4%A8%EF%BC%9A%E6%8A%8A%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E7%9A%84%E8%BE%93%E5%87%BA%E6%8E%A5%E6%88%90%E5%8F%A6%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E7%9A%84%E8%BE%93%E5%85%A5"><span class="toc-number">1.</span> <span class="toc-text">管道的本质：把一个命令的输出接成另一个命令的输入</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B3%E9%94%AE%E5%8C%BA%E5%88%86%EF%BC%9A%E8%B0%81%E8%AF%BB-stdin%EF%BC%8C%E8%B0%81%E5%8F%AA%E8%AE%A4%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%8F%82%E6%95%B0"><span class="toc-number">2.</span> <span class="toc-text">关键区分：谁读 stdin，谁只认命令行参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#xargs-%E7%9A%84%E6%84%8F%E4%B9%89%EF%BC%9A%E6%8A%8A-stdin-%E8%BD%AC%E6%8D%A2%E6%88%90%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%8F%82%E6%95%B0"><span class="toc-number">3.</span> <span class="toc-text">xargs 的意义：把 stdin 转换成命令行参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#xargs-%E6%A0%B8%E5%BF%83%E5%8F%82%E6%95%B0"><span class="toc-number">4.</span> <span class="toc-text">xargs 核心参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#xargs-P%EF%BC%9A%E5%AE%B9%E6%98%93%E8%A2%AB%E5%BF%BD%E7%95%A5%E7%9A%84%E5%B9%B6%E8%A1%8C%E6%89%A7%E8%A1%8C"><span class="toc-number">5.</span> <span class="toc-text">xargs -P：容易被忽略的并行执行</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#xargs-%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">6.</span> <span class="toc-text">xargs 常用参数速查表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#xargs-%E5%92%8C-find-exec-%E7%9A%84%E5%AF%B9%E6%AF%94"><span class="toc-number">7.</span> <span class="toc-text">xargs 和 find -exec 的对比</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Unix-%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6%E8%90%BD%E5%9C%B0%EF%BC%9A%E5%B0%8F%E5%B7%A5%E5%85%B7%E3%80%81%E6%96%87%E6%9C%AC%E6%8E%A5%E5%8F%A3%E3%80%81%E8%87%AA%E7%94%B1%E7%BB%84%E5%90%88"><span class="toc-number">8.</span> <span class="toc-text">Unix 设计哲学落地：小工具、文本接口、自由组合</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Linux-%E5%91%BD%E4%BB%A4%E7%B3%BB%E5%88%97%EF%BC%9A%E8%B5%B0%E5%88%B0%E8%BF%99%E9%87%8C"><span class="toc-number">9.</span> <span class="toc-text">Linux 命令系列：走到这里</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/" title="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件"><img src="/img/p36.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件"/></a><div class="content"><a class="title" href="/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/" title="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件">xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件</a><time datetime="2026-07-12T08:52:33.000Z" title="发表于 2026-07-12 16:52:33">2026-07-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"><img src="/img/p35.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"/></a><div class="content"><a class="title" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定">Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定</a><time datetime="2026-07-12T08:45:34.000Z" title="发表于 2026-07-12 16:45:34">2026-07-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/tar-zip-unzip%E5%BD%92%E6%A1%A3%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%B8%B8%E8%A7%81%E5%9D%91%E5%AE%9E%E6%88%98/" title="tar、zip/unzip：归档压缩命令与常见坑实战"><img src="/img/p34.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="tar、zip/unzip：归档压缩命令与常见坑实战"/></a><div class="content"><a class="title" href="/tar-zip-unzip%E5%BD%92%E6%A1%A3%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%B8%B8%E8%A7%81%E5%9D%91%E5%AE%9E%E6%88%98/" title="tar、zip/unzip：归档压缩命令与常见坑实战">tar、zip/unzip：归档压缩命令与常见坑实战</a><time datetime="2026-07-11T09:00:00.000Z" title="发表于 2026-07-11 17:00:00">2026-07-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/" title="find：条件组合、-exec 两种写法与性能实战"><img src="/img/p33.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="find：条件组合、-exec 两种写法与性能实战"/></a><div class="content"><a class="title" href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/" title="find：条件组合、-exec 两种写法与性能实战">find：条件组合、-exec 两种写法与性能实战</a><time datetime="2026-07-11T07:00:00.000Z" title="发表于 2026-07-11 15:00:00">2026-07-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98/" title="grep：正则匹配、上下文控制与 -E/-P 实战"><img src="/img/p32.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="grep：正则匹配、上下文控制与 -E/-P 实战"/></a><div class="content"><a class="title" href="/grep%E6%AD%A3%E5%88%99%E5%8C%B9%E9%85%8D%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8E%A7%E5%88%B6%E5%AE%9E%E6%88%98/" title="grep：正则匹配、上下文控制与 -E/-P 实战">grep：正则匹配、上下文控制与 -E/-P 实战</a><time datetime="2026-07-11T02:00:00.000Z" title="发表于 2026-07-11 10:00:00">2026-07-11</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script>function injectCategoryDesc(){var el=document.querySelector('.category-lists');if(!el||el.nextElementSibling&&el.nextElementSibling.id==='cat-desc')return;var desc=document.createElement('div');desc.id='cat-desc';desc.style.cssText='margin-top:28px;padding:20px 24px;background:rgba(255,255,255,0.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.45);border-radius:14px;';desc.innerHTML='<h3 style="margin:0 0 14px;font-size:.95rem;font-weight:700;color:#3b3b5c;">各分类说明</h3><table style="width:100%;border-collapse:collapse;font-size:.875rem;"><tbody><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">tools</td><td style="padding:8px 12px;color:#5a5a7a;">工具链系列，覆盖终端、Shell、搜索、文件管理、Git TUI、编辑器等；也包含 tldr、git tag 等命令速查</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">golang</td><td style="padding:8px 12px;color:#5a5a7a;">Go 后端实战：常见业务问题解决方案实现</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">git</td><td style="padding:8px 12px;color:#5a5a7a;">Git 常见使用方式以及操作技巧</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">ai</td><td style="padding:8px 12px;color:#5a5a7a;"> ai 相关使用和分享</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">cursor</td><td style="padding:8px 12px;color:#5a5a7a;">Cursor 编辑器：使用场景和难点</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">Hexo</td><td style="padding:8px 12px;color:#5a5a7a;">hexo 搭建博客的常见配置技巧</td></tr><tr><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">problem</td><td style="padding:8px 12px;color:#5a5a7a;">记录各种问题报错的排查过程</td></tr></tbody></table>';el.after(desc);}document.addEventListener('DOMContentLoaded',injectCategoryDesc);document.addEventListener('pjax:complete',injectCategoryDesc);</script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>
