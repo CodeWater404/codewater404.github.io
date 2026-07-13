@@ -1,0 +1,528 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>vim 基本操作：从模式切换到保存退出 | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="vim 的 Normal&#x2F;Insert 模式是什么、怎么退出、hjkl 怎么移动、dd&#x2F;yy&#x2F;p 怎么编辑、%s 怎么全局替换，一篇学会基础操作。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="vim 基本操作：从模式切换到保存退出">
+<meta property="og:url" content="https://blog.codewater.top/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="vim 的 Normal&#x2F;Insert 模式是什么、怎么退出、hjkl 怎么移动、dd&#x2F;yy&#x2F;p 怎么编辑、%s 怎么全局替换，一篇学会基础操作。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p38.jpg">
+<meta property="article:published_time" content="2026-07-12T16:23:35.000Z">
+<meta property="article:modified_time" content="2026-07-12T16:23:35.000Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="CLI">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="命令行">
+<meta property="article:tag" content="vim">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p38.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "vim 基本操作：从模式切换到保存退出",
+  "url": "https://blog.codewater.top/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/",
+  "image": "https://blog.codewater.top/img/p38.jpg",
+  "datePublished": "2026-07-12T16:23:35.000Z",
+  "dateModified": "2026-07-12T16:23:35.000Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'vim 基本操作：从模式切换到保存退出',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><style>.category-lists{background:linear-gradient(135deg,#667eea55,#f5576c44,#4facfe44,#43e97b44);border-radius:20px;padding:28px !important;position:relative;overflow:hidden}.category-lists::before{content:'';position:absolute;top:-80px;left:-80px;width:240px;height:240px;background:radial-gradient(circle,#a78bfa88,transparent 70%);border-radius:50%;pointer-events:none}.category-lists::after{content:'';position:absolute;bottom:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,#f9a8d488,transparent 70%);border-radius:50%;pointer-events:none}.category-lists .category-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;padding:0 !important;list-style:none !important;margin:0 !important;position:relative;z-index:1}.category-lists .category-list>li.category-list-item{background:rgba(255,255,255,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.55);border-radius:14px;padding:22px 20px 18px;margin:0 !important;box-shadow:0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.7);transition:transform .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}.category-lists .category-list>li.category-list-item::before{display:none !important}.category-lists .category-list>li.category-list-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.7)}.category-lists .category-list-link{font-size:1rem;font-weight:700;color:#3b3b5c !important;display:block;margin-bottom:10px;line-height:1.3}.category-lists .category-list-count{display:inline-block;font-size:.78rem;font-weight:600;color:#5a5a7a !important;background:rgba(255,255,255,0.5);padding:2px 10px;border-radius:20px;margin-left:0 !important;border:1px solid rgba(255,255,255,0.7)}.category-lists .category-list-count::before,.category-lists .category-list-count::after{content:'' !important}.category-lists .category-list-child{margin-top:10px;padding:10px 0 0 0 !important;border-top:1px solid rgba(255,255,255,0.4) !important;list-style:none !important}.category-lists .category-list-child li.category-list-item{margin:5px 0 !important;padding:0 !important}.category-lists .category-list-child li.category-list-item::before{display:none !important}.category-lists .category-list-child .category-list-link{font-size:.82rem;font-weight:400;color:#5a5a7a !important;margin-bottom:0}.category-lists .category-list-child .category-list-count{font-size:.7rem;padding:1px 7px}[data-theme=dark] .category-lists .category-list>li.category-list-item{background:rgba(30,30,50,0.45);border-color:rgba(255,255,255,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.1)}[data-theme=dark] .category-lists .category-list-link{color:#e2e2f0 !important}[data-theme=dark] .category-lists .category-list-count{color:#a0a0c0 !important;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}[data-theme=dark] .category-lists .category-list-child .category-list-link{color:#a0a0c0 !important}</style><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Code Water" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">40</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">73</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p38.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">vim 基本操作：从模式切换到保存退出</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">vim 基本操作：从模式切换到保存退出</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-12T16:23:35.000Z" title="发表于 2026-07-13 00:23:35">2026-07-13</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-12T16:23:35.000Z" title="更新于 2026-07-13 00:23:35">2026-07-13</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/tools/">tools</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>“怎么退出 vim”是程序员圈子里流传最广的梗之一——一个编辑器要是连怎么关掉都成了笑话，说明它一定有什么地方和你以为的不一样。</p>
+<p>这个”不一样”，就是 vim 最核心的概念：模式。搞懂这一件事，剩下的操作都顺理成章。</p>
+<span id="more"></span>
+
+<p>这是终端效率小系列第二篇，承接 <a href="/%E4%B8%8D%E7%86%9F%E6%82%89%E7%9A%84%E5%91%BD%E4%BB%A4%E6%80%8E%E4%B9%88%E5%BF%AB%E9%80%9F%E6%90%9E%E6%87%82-man%E9%A1%B5%E9%9D%A2%E7%BB%93%E6%9E%84%E4%B8%8Eapropos%E9%80%9F%E6%9F%A5">不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 –help 速查</a>。</p>
+<h2 id="vim-最核心的概念：模式"><a href="#vim-最核心的概念：模式" class="headerlink" title="vim 最核心的概念：模式"></a>vim 最核心的概念：模式</h2><p>大部分编辑器打开就能直接打字。vim 不是——它默认打开的是 <strong>Normal 模式</strong>（也叫命令模式），这时候敲键盘不是在输入文字，是在下命令。想打字，得先按 <code>i</code> 切换到 <strong>Insert 模式</strong>；打完字想回去下命令，按 <code>Esc</code> 切回 Normal 模式。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">打开 vim → 默认在 Normal 模式（敲字母是命令）</span><br><span class="line">按 i     → 切到 Insert 模式（可以打字了）</span><br><span class="line">按 Esc   → 切回 Normal 模式（打字模式关闭，字母重新变成命令）</span><br></pre></td></tr></table></figure>
+
+<p>新手最常见的翻车场景就是这个：不知道自己在 Normal 模式，对着屏幕一通乱按，结果文件被改得面目全非——因为那些字母全被当成了命令，不是文字。记住一条：<strong>不确定自己在哪个模式，先按 <code>Esc</code>，回到 Normal 模式再说</strong>，这是最安全的复位动作。</p>
+<h2 id="先学怎么退出"><a href="#先学怎么退出" class="headerlink" title="先学怎么退出"></a>先学怎么退出</h2><p>呼应开头的梗，这个必须先讲：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">:q</span><br><span class="line"><span class="comment">#     退出。文件没有改动过才能用，改过没保存会报错拒绝退出</span></span><br><span class="line"></span><br><span class="line">:q!</span><br><span class="line"><span class="comment">#     强制退出，不保存任何改动——改错了想放弃这次编辑，用这个</span></span><br><span class="line"></span><br><span class="line">:w</span><br><span class="line"><span class="comment">#     只保存，不退出，继续编辑</span></span><br><span class="line"></span><br><span class="line">:wq</span><br><span class="line"><span class="comment">#     保存并退出，不管文件有没有改动过，都会写入磁盘</span></span><br><span class="line"></span><br><span class="line">:x</span><br><span class="line"><span class="comment">#     也是保存并退出，但只在文件真的被改动过时才写入磁盘；</span></span><br><span class="line"><span class="comment">#     如果没有改动，:x 不会碰这个文件，文件的修改时间也不会变</span></span><br><span class="line"><span class="comment">#     日常用 :wq 和 :x 效果几乎一样，区别只在&quot;文件没改动时要不要触碰修改时间&quot;这种边缘场景</span></span><br></pre></td></tr></table></figure>
+
+<p>所有这些命令都以 <code>:</code> 开头，输入前记得先确认自己在 Normal 模式（如果还在 Insert 模式，先按 <code>Esc</code>）。</p>
+<h2 id="Normal-模式下移动光标"><a href="#Normal-模式下移动光标" class="headerlink" title="Normal 模式下移动光标"></a>Normal 模式下移动光标</h2><p>vim 不太依赖方向键，用几个字母键代替（键盘老式布局上这几个键离主键位更近，不用挪手，很多人这么解释这个设计，具体历史已经不可考）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">h j k l</span><br><span class="line"><span class="comment">#     依次是 左 下 上 右，代替方向键</span></span><br><span class="line"><span class="comment">#     记不住就想 j 像个往下的箭头，k 在它上面对应往上</span></span><br><span class="line"></span><br><span class="line">w</span><br><span class="line"><span class="comment">#     跳到下一个单词的开头</span></span><br><span class="line"></span><br><span class="line">b</span><br><span class="line"><span class="comment">#     跳到上一个单词的开头（back）</span></span><br><span class="line"></span><br><span class="line">e</span><br><span class="line"><span class="comment">#     跳到当前/下一个单词的结尾</span></span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"><span class="comment">#     跳到当前行的行首</span></span><br><span class="line"></span><br><span class="line">$</span><br><span class="line"><span class="comment">#     跳到当前行的行尾</span></span><br><span class="line"></span><br><span class="line">gg</span><br><span class="line"><span class="comment">#     跳到文件开头</span></span><br><span class="line"></span><br><span class="line">G</span><br><span class="line"><span class="comment">#     跳到文件结尾</span></span><br></pre></td></tr></table></figure>
+
+<p>前面加数字表示重复次数：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">5j</span><br><span class="line"><span class="comment">#     往下移动 5 行，比按 5 次 j 快</span></span><br><span class="line"></span><br><span class="line">3w</span><br><span class="line"><span class="comment">#     往后跳 3 个单词</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="行内跳转：按字符查找与括号匹配"><a href="#行内跳转：按字符查找与括号匹配" class="headerlink" title="行内跳转：按字符查找与括号匹配"></a>行内跳转：按字符查找与括号匹配</h2><p><code>hjkl</code>&#x2F;<code>w</code>&#x2F;<code>b</code>&#x2F;<code>e</code> 这些是逐字符或逐单词移动，遇到”跳到这一行某个具体符号上”的场景（比如跳到某个逗号、跳到配对的括号），还有更快的办法：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">f,</span><br><span class="line"><span class="comment">#     向右查找光标所在行里下一个 &quot;,&quot; 字符，光标直接停在它上面（find）</span></span><br><span class="line"></span><br><span class="line">t,</span><br><span class="line"><span class="comment">#     向右查找下一个 &quot;,&quot; 字符，光标停在它前面一位（till，&quot;直到&quot;但不包含）</span></span><br><span class="line"></span><br><span class="line">F,</span><br><span class="line"><span class="comment">#     向左查找上一个 &quot;,&quot; 字符，光标停在它上面</span></span><br><span class="line"></span><br><span class="line">T,</span><br><span class="line"><span class="comment">#     向左查找上一个 &quot;,&quot; 字符，光标停在它后面一位</span></span><br><span class="line"></span><br><span class="line">;</span><br><span class="line"><span class="comment">#     重复上一次 f/t/F/T 查找，跳到下一个匹配，不用重新敲一次 f 加字符</span></span><br><span class="line"></span><br><span class="line">%</span><br><span class="line"><span class="comment">#     跳到光标所在括号 ( &#123; [ 的配对括号上，来回按 % 可以在一对括号之间横跳</span></span><br></pre></td></tr></table></figure>
+
+<p>一行很长的代码里要定位到某个符号，<code>f</code> 加上那个字符，比一个字符一个字符挪快得多；改代码时经常要确认括号有没有配对齐，把光标放在括号上按 <code>%</code> 直接跳到另一半，比肉眼数括号可靠。</p>
+<h2 id="Normal-模式下编辑文本"><a href="#Normal-模式下编辑文本" class="headerlink" title="Normal 模式下编辑文本"></a>Normal 模式下编辑文本</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">i</span><br><span class="line"><span class="comment">#     在光标当前位置之前插入，进入 Insert 模式</span></span><br><span class="line"></span><br><span class="line">a</span><br><span class="line"><span class="comment">#     在光标当前位置之后插入（append），进入 Insert 模式</span></span><br><span class="line"></span><br><span class="line">o</span><br><span class="line"><span class="comment">#     在当前行下面新起一行，进入 Insert 模式</span></span><br><span class="line"></span><br><span class="line">O</span><br><span class="line"><span class="comment">#     在当前行上面新起一行，进入 Insert 模式</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">dd</span></span><br><span class="line"><span class="comment">#     删除光标所在的整行（同时会把这行内容存到剪贴板，等于剪切）</span></span><br><span class="line"></span><br><span class="line">yy</span><br><span class="line"><span class="comment">#     复制光标所在的整行（yank，不删除）</span></span><br><span class="line"></span><br><span class="line">p</span><br><span class="line"><span class="comment">#     粘贴——把上一次 dd 或 yy 存下来的内容，粘贴到光标下面</span></span><br><span class="line"></span><br><span class="line">u</span><br><span class="line"><span class="comment">#     撤销上一步操作</span></span><br><span class="line"></span><br><span class="line">Ctrl-r</span><br><span class="line"><span class="comment">#     重做（撤销&quot;撤销&quot;）</span></span><br><span class="line"></span><br><span class="line">x</span><br><span class="line"><span class="comment">#     删除光标所在的这一个字符——精简版的 dd，只删一个字符不是一整行</span></span><br><span class="line"></span><br><span class="line">r字符</span><br><span class="line"><span class="comment">#     把光标所在字符替换成指定字符，替换完自动回到 Normal 模式，不用再按 Esc</span></span><br><span class="line"><span class="comment">#     比如光标停在一个打错的字母上，按 rx 就把它换成 x</span></span><br><span class="line"></span><br><span class="line">cw</span><br><span class="line"><span class="comment">#     修改一个单词——删除光标到当前单词结尾的内容，直接进入 Insert 模式等着输入新内容</span></span><br><span class="line"><span class="comment">#     等于先 dw 再 i，但 cw 是更常用的固定搭配，一步到位</span></span><br><span class="line"></span><br><span class="line">.</span><br><span class="line"><span class="comment">#     重复上一次的修改操作——改完一处后，把光标移到下一个类似的地方按 .，</span></span><br><span class="line"><span class="comment">#     不用重新敲一遍命令，改多处同样的错误时特别省事</span></span><br></pre></td></tr></table></figure>
+
+<p><code>i</code>&#x2F;<code>a</code>&#x2F;<code>o</code>&#x2F;<code>O</code> 这四个进 Insert 模式的方式，区别就在光标最终停在哪：<code>i</code> 停在原地之前，<code>a</code> 停在原地之后，<code>o</code>&#x2F;<code>O</code> 分别在下面&#x2F;上面新开一行。</p>
+<h2 id="Visual-模式：选中一段范围再操作"><a href="#Visual-模式：选中一段范围再操作" class="headerlink" title="Visual 模式：选中一段范围再操作"></a>Visual 模式：选中一段范围再操作</h2><p>前面的编辑命令大多是”整行”或”一个单词”级别，想自己框选一段范围再操作，要用 Visual（可视）模式。进入方式有三种，选中范围的方式不一样：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">v</span><br><span class="line"><span class="comment">#     进入字符可视模式，逐字符选中——像鼠标拖选一样，选中范围不受行/单词边界限制</span></span><br><span class="line"></span><br><span class="line">V</span><br><span class="line"><span class="comment">#     进入行可视模式，整行整行地选，光标上下移动就是按行扩大选区</span></span><br><span class="line"></span><br><span class="line">Ctrl-v</span><br><span class="line"><span class="comment">#     进入块可视模式，选出一个矩形范围，常用来同时给多行的相同列位置加字符</span></span><br></pre></td></tr></table></figure>
+
+<p>选中范围之后，跟前面学过的编辑命令组合使用，效果作用在整个选区上：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">d</span><br><span class="line"><span class="comment">#     删除选中的范围</span></span><br><span class="line"></span><br><span class="line">y</span><br><span class="line"><span class="comment">#     复制选中的范围（yank）</span></span><br><span class="line"></span><br><span class="line">c</span><br><span class="line"><span class="comment">#     删除选中的范围，直接进入 Insert 模式，改成新内容</span></span><br></pre></td></tr></table></figure>
+
+<p>举例：用 <code>V</code> 选中三行按 <code>d</code>，一次删掉三行；用 <code>v</code> 选中一段文字（不是整行）按 <code>y</code>，只复制这一小段。选错了想取消，按 <code>Esc</code> 退出 Visual 模式，不会做任何改动。</p>
+<h2 id="查找和替换"><a href="#查找和替换" class="headerlink" title="查找和替换"></a>查找和替换</h2><p>搜索用 <code>/</code>，和<a href="/%E4%B8%8D%E7%86%9F%E6%82%89%E7%9A%84%E5%91%BD%E4%BB%A4%E6%80%8E%E4%B9%88%E5%BF%AB%E9%80%9F%E6%90%9E%E6%87%82-man%E9%A1%B5%E9%9D%A2%E7%BB%93%E6%9E%84%E4%B8%8Eapropos%E9%80%9F%E6%9F%A5">上一篇讲 man 页面查找</a>里 <code>less</code> 的搜索快捷键是同一套逻辑——vim 的分页和搜索机制本来就深受这套习惯影响：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">/关键词</span><br><span class="line"><span class="comment">#     向下搜索，回车确认</span></span><br><span class="line"></span><br><span class="line">n</span><br><span class="line"><span class="comment">#     跳到下一个匹配</span></span><br><span class="line"></span><br><span class="line">N</span><br><span class="line"><span class="comment">#     跳到上一个匹配（大写，方向和 n 相反）</span></span><br></pre></td></tr></table></figure>
+
+<p>全局替换用 <code>:%s</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">:%s/旧文本/新文本/g</span><br><span class="line"><span class="comment">#     % 表示作用范围是整个文件（不加 % 只替换当前光标所在行）</span></span><br><span class="line"><span class="comment">#     s 是 substitute，替换命令本身</span></span><br><span class="line"><span class="comment">#     g 表示每一行里所有匹配都替换，不加 g 的话每行只替换第一个匹配到的</span></span><br></pre></td></tr></table></figure>
+
+<p><code>%</code> 和 <code>g</code> 这两个符号经常被忽略，结果就是”明明替换了，怎么还有没改的地方”——十有八九是漏了 <code>%</code>（只在当前行生效）或者漏了 <code>g</code>（每行只替换了第一处）。</p>
+<h2 id="终端效率小系列：下一篇"><a href="#终端效率小系列：下一篇" class="headerlink" title="终端效率小系列：下一篇"></a>终端效率小系列：下一篇</h2><p>下一篇讲 Emacs 风格快捷键——包括一个进阶技巧：在 shell 命令行敲了一半的命令，直接甩进 vim&#x2F;nvim 里编辑，改完存盘退出，编辑结果自动回到命令行。用到的正是这篇学的基础操作。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/">https://blog.codewater.top/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/CLI/">CLI</a><a class="post-meta__tags" href="/tags/Linux/">Linux</a><a class="post-meta__tags" href="/tags/%E5%91%BD%E4%BB%A4%E8%A1%8C/">命令行</a><a class="post-meta__tags" href="/tags/vim/">vim</a></div><div class="post-share"><div class="social-share" data-image="/img/p38.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/%E5%91%BD%E4%BB%A4%E8%A1%8C%E7%BC%96%E8%BE%91%E8%BF%9B%E9%98%B6-Emacs%E5%BF%AB%E6%8D%B7%E9%94%AE%E4%B8%8E%E7%94%A9%E8%BF%9Bvim%E7%BC%96%E8%BE%91/" title="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行"><img class="cover" src="/img/p39.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行</div></div><div class="info-2"><div class="info-item-1">bash/zsh 默认是 Emacs 键位：Ctrl-A/E/W/U/K/Y 怎么用、Ctrl-X Ctrl-E 甩进编辑器改命令，附 vim 跳转指定行技巧。</div></div></div></a><a class="pagination-related" href="/%E4%B8%8D%E7%86%9F%E6%82%89%E7%9A%84%E5%91%BD%E4%BB%A4%E6%80%8E%E4%B9%88%E5%BF%AB%E9%80%9F%E6%90%9E%E6%87%82-man%E9%A1%B5%E9%9D%A2%E7%BB%93%E6%9E%84%E4%B8%8Eapropos%E9%80%9F%E6%9F%A5/" title="不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查"><img class="cover" src="/img/p37.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查</div></div><div class="info-2"><div class="info-item-1">遇到不认识的命令或忘了参数怎么办：man 页面固定结构怎么读、apropos 怎么按关键词搜命令、--help 怎么用。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/%E5%91%BD%E4%BB%A4%E8%A1%8C%E7%BC%96%E8%BE%91%E8%BF%9B%E9%98%B6-Emacs%E5%BF%AB%E6%8D%B7%E9%94%AE%E4%B8%8E%E7%94%A9%E8%BF%9Bvim%E7%BC%96%E8%BE%91/" title="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行"><img class="cover" src="/img/p39.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-13</div><div class="info-item-2">命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行</div></div><div class="info-2"><div class="info-item-1">bash/zsh 默认是 Emacs 键位：Ctrl-A/E/W/U/K/Y 怎么用、Ctrl-X Ctrl-E 甩进编辑器改命令，附 vim 跳转指定行技巧。</div></div></div></a><a class="pagination-related" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img class="cover" src="/img/p30.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-09</div><div class="info-item-2">Linux 常见命令与工具地图(备忘录)</div></div><div class="info-2"><div class="info-item-1">按场景分类的 Linux 命令速查地图：文件、文本处理、进程、网络、权限、包管理、压缩传输、Git，每条一句话说明用途，配合详细文章深入用法。</div></div></div></a><a class="pagination-related" href="/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/" title="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件"><img class="cover" src="/img/p36.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件</div></div><div class="info-2"><div class="info-item-1">管道的本质是什么、为什么有些命令吃 stdin 有些只认参数、xargs 怎么架桥，以及背后支撑整个 Linux 命令行的 Unix 设计哲学。</div></div></div></a><a class="pagination-related" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"><img class="cover" src="/img/p35.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定</div></div><div class="info-2"><div class="info-item-1">短选项和长选项是什么关系、为什么 grep -v 和 node -v 意思完全不同、-- 怎么用，讲清楚 Linux 命令行选项背后没有强制标准的设计约定。</div></div></div></a><a class="pagination-related" href="/%E4%B8%8D%E7%86%9F%E6%82%89%E7%9A%84%E5%91%BD%E4%BB%A4%E6%80%8E%E4%B9%88%E5%BF%AB%E9%80%9F%E6%90%9E%E6%87%82-man%E9%A1%B5%E9%9D%A2%E7%BB%93%E6%9E%84%E4%B8%8Eapropos%E9%80%9F%E6%9F%A5/" title="不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查"><img class="cover" src="/img/p37.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-13</div><div class="info-item-2">不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查</div></div><div class="info-2"><div class="info-item-1">遇到不认识的命令或忘了参数怎么办：man 页面固定结构怎么读、apropos 怎么按关键词搜命令、--help 怎么用。</div></div></div></a><a class="pagination-related" href="/find%E6%9D%A1%E4%BB%B6%E7%BB%84%E5%90%88%E4%B8%8Eexec%E6%80%A7%E8%83%BD%E5%AE%9E%E6%88%98/" title="find：条件组合、-exec 两种写法与性能实战"><img class="cover" src="/img/p33.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">find：条件组合、-exec 两种写法与性能实战</div></div><div class="info-2"><div class="info-item-1">find 的条件与动作怎么分、-mtime/-size 符号方向、-exec 用 \; 和 + 性能差在哪，一篇讲清楚原生 find 的实战用法。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">40</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">73</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#vim-%E6%9C%80%E6%A0%B8%E5%BF%83%E7%9A%84%E6%A6%82%E5%BF%B5%EF%BC%9A%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.</span> <span class="toc-text">vim 最核心的概念：模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%88%E5%AD%A6%E6%80%8E%E4%B9%88%E9%80%80%E5%87%BA"><span class="toc-number">2.</span> <span class="toc-text">先学怎么退出</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Normal-%E6%A8%A1%E5%BC%8F%E4%B8%8B%E7%A7%BB%E5%8A%A8%E5%85%89%E6%A0%87"><span class="toc-number">3.</span> <span class="toc-text">Normal 模式下移动光标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%A1%8C%E5%86%85%E8%B7%B3%E8%BD%AC%EF%BC%9A%E6%8C%89%E5%AD%97%E7%AC%A6%E6%9F%A5%E6%89%BE%E4%B8%8E%E6%8B%AC%E5%8F%B7%E5%8C%B9%E9%85%8D"><span class="toc-number">4.</span> <span class="toc-text">行内跳转：按字符查找与括号匹配</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Normal-%E6%A8%A1%E5%BC%8F%E4%B8%8B%E7%BC%96%E8%BE%91%E6%96%87%E6%9C%AC"><span class="toc-number">5.</span> <span class="toc-text">Normal 模式下编辑文本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Visual-%E6%A8%A1%E5%BC%8F%EF%BC%9A%E9%80%89%E4%B8%AD%E4%B8%80%E6%AE%B5%E8%8C%83%E5%9B%B4%E5%86%8D%E6%93%8D%E4%BD%9C"><span class="toc-number">6.</span> <span class="toc-text">Visual 模式：选中一段范围再操作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9F%A5%E6%89%BE%E5%92%8C%E6%9B%BF%E6%8D%A2"><span class="toc-number">7.</span> <span class="toc-text">查找和替换</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%88%E7%AB%AF%E6%95%88%E7%8E%87%E5%B0%8F%E7%B3%BB%E5%88%97%EF%BC%9A%E4%B8%8B%E4%B8%80%E7%AF%87"><span class="toc-number">8.</span> <span class="toc-text">终端效率小系列：下一篇</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/%E5%91%BD%E4%BB%A4%E8%A1%8C%E7%BC%96%E8%BE%91%E8%BF%9B%E9%98%B6-Emacs%E5%BF%AB%E6%8D%B7%E9%94%AE%E4%B8%8E%E7%94%A9%E8%BF%9Bvim%E7%BC%96%E8%BE%91/" title="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行"><img src="/img/p39.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行"/></a><div class="content"><a class="title" href="/%E5%91%BD%E4%BB%A4%E8%A1%8C%E7%BC%96%E8%BE%91%E8%BF%9B%E9%98%B6-Emacs%E5%BF%AB%E6%8D%B7%E9%94%AE%E4%B8%8E%E7%94%A9%E8%BF%9Bvim%E7%BC%96%E8%BE%91/" title="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行">命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行</a><time datetime="2026-07-12T16:30:02.000Z" title="发表于 2026-07-13 00:30:02">2026-07-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/" title="vim 基本操作：从模式切换到保存退出"><img src="/img/p38.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="vim 基本操作：从模式切换到保存退出"/></a><div class="content"><a class="title" href="/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/" title="vim 基本操作：从模式切换到保存退出">vim 基本操作：从模式切换到保存退出</a><time datetime="2026-07-12T16:23:35.000Z" title="发表于 2026-07-13 00:23:35">2026-07-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E4%B8%8D%E7%86%9F%E6%82%89%E7%9A%84%E5%91%BD%E4%BB%A4%E6%80%8E%E4%B9%88%E5%BF%AB%E9%80%9F%E6%90%9E%E6%87%82-man%E9%A1%B5%E9%9D%A2%E7%BB%93%E6%9E%84%E4%B8%8Eapropos%E9%80%9F%E6%9F%A5/" title="不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查"><img src="/img/p37.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查"/></a><div class="content"><a class="title" href="/%E4%B8%8D%E7%86%9F%E6%82%89%E7%9A%84%E5%91%BD%E4%BB%A4%E6%80%8E%E4%B9%88%E5%BF%AB%E9%80%9F%E6%90%9E%E6%87%82-man%E9%A1%B5%E9%9D%A2%E7%BB%93%E6%9E%84%E4%B8%8Eapropos%E9%80%9F%E6%9F%A5/" title="不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查">不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查</a><time datetime="2026-07-12T16:18:38.000Z" title="发表于 2026-07-13 00:18:38">2026-07-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/" title="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件"><img src="/img/p36.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件"/></a><div class="content"><a class="title" href="/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/" title="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件">xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件</a><time datetime="2026-07-12T08:52:33.000Z" title="发表于 2026-07-12 16:52:33">2026-07-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"><img src="/img/p35.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"/></a><div class="content"><a class="title" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定">Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定</a><time datetime="2026-07-12T08:45:34.000Z" title="发表于 2026-07-12 16:45:34">2026-07-12</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script>function injectCategoryDesc(){var el=document.querySelector('.category-lists');if(!el||el.nextElementSibling&&el.nextElementSibling.id==='cat-desc')return;var desc=document.createElement('div');desc.id='cat-desc';desc.style.cssText='margin-top:28px;padding:20px 24px;background:rgba(255,255,255,0.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.45);border-radius:14px;';desc.innerHTML='<h3 style="margin:0 0 14px;font-size:.95rem;font-weight:700;color:#3b3b5c;">各分类说明</h3><table style="width:100%;border-collapse:collapse;font-size:.875rem;"><tbody><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">tools</td><td style="padding:8px 12px;color:#5a5a7a;">工具链系列，覆盖终端、Shell、搜索、文件管理、Git TUI、编辑器等；也包含 tldr、git tag 等命令速查</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">golang</td><td style="padding:8px 12px;color:#5a5a7a;">Go 后端实战：常见业务问题解决方案实现</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">git</td><td style="padding:8px 12px;color:#5a5a7a;">Git 常见使用方式以及操作技巧</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">ai</td><td style="padding:8px 12px;color:#5a5a7a;"> ai 相关使用和分享</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">cursor</td><td style="padding:8px 12px;color:#5a5a7a;">Cursor 编辑器：使用场景和难点</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">Hexo</td><td style="padding:8px 12px;color:#5a5a7a;">hexo 搭建博客的常见配置技巧</td></tr><tr><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">problem</td><td style="padding:8px 12px;color:#5a5a7a;">记录各种问题报错的排查过程</td></tr></tbody></table>';el.after(desc);}document.addEventListener('DOMContentLoaded',injectCategoryDesc);document.addEventListener('pjax:complete',injectCategoryDesc);</script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>
