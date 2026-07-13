@@ -1,0 +1,516 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战 | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="网站打不开怎么分层排查：ping 测连通、traceroute 定位断点、dig 查 DNS 解析。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="网络连不上怎么排查：ping、traceroute 与 dig&#x2F;nslookup 实战">
+<meta property="og:url" content="https://blog.codewater.top/%E7%BD%91%E7%BB%9C%E8%BF%9E%E9%80%9A%E6%80%A7%E8%AF%8A%E6%96%AD-ping-traceroute%E4%B8%8Edig%E5%AE%9E%E6%88%98/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="网站打不开怎么分层排查：ping 测连通、traceroute 定位断点、dig 查 DNS 解析。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p42.jpg">
+<meta property="article:published_time" content="2026-07-13T12:40:49.000Z">
+<meta property="article:modified_time" content="2026-07-13T12:40:49.000Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="CLI">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="命令行">
+<meta property="article:tag" content="网络">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p42.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战",
+  "url": "https://blog.codewater.top/%E7%BD%91%E7%BB%9C%E8%BF%9E%E9%80%9A%E6%80%A7%E8%AF%8A%E6%96%AD-ping-traceroute%E4%B8%8Edig%E5%AE%9E%E6%88%98/",
+  "image": "https://blog.codewater.top/img/p42.jpg",
+  "datePublished": "2026-07-13T12:40:49.000Z",
+  "dateModified": "2026-07-13T12:40:49.000Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/%E7%BD%91%E7%BB%9C%E8%BF%9E%E9%80%9A%E6%80%A7%E8%AF%8A%E6%96%AD-ping-traceroute%E4%B8%8Edig%E5%AE%9E%E6%88%98/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><style>.category-lists{background:linear-gradient(135deg,#667eea55,#f5576c44,#4facfe44,#43e97b44);border-radius:20px;padding:28px !important;position:relative;overflow:hidden}.category-lists::before{content:'';position:absolute;top:-80px;left:-80px;width:240px;height:240px;background:radial-gradient(circle,#a78bfa88,transparent 70%);border-radius:50%;pointer-events:none}.category-lists::after{content:'';position:absolute;bottom:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,#f9a8d488,transparent 70%);border-radius:50%;pointer-events:none}.category-lists .category-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;padding:0 !important;list-style:none !important;margin:0 !important;position:relative;z-index:1}.category-lists .category-list>li.category-list-item{background:rgba(255,255,255,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.55);border-radius:14px;padding:22px 20px 18px;margin:0 !important;box-shadow:0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.7);transition:transform .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}.category-lists .category-list>li.category-list-item::before{display:none !important}.category-lists .category-list>li.category-list-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.7)}.category-lists .category-list-link{font-size:1rem;font-weight:700;color:#3b3b5c !important;display:block;margin-bottom:10px;line-height:1.3}.category-lists .category-list-count{display:inline-block;font-size:.78rem;font-weight:600;color:#5a5a7a !important;background:rgba(255,255,255,0.5);padding:2px 10px;border-radius:20px;margin-left:0 !important;border:1px solid rgba(255,255,255,0.7)}.category-lists .category-list-count::before,.category-lists .category-list-count::after{content:'' !important}.category-lists .category-list-child{margin-top:10px;padding:10px 0 0 0 !important;border-top:1px solid rgba(255,255,255,0.4) !important;list-style:none !important}.category-lists .category-list-child li.category-list-item{margin:5px 0 !important;padding:0 !important}.category-lists .category-list-child li.category-list-item::before{display:none !important}.category-lists .category-list-child .category-list-link{font-size:.82rem;font-weight:400;color:#5a5a7a !important;margin-bottom:0}.category-lists .category-list-child .category-list-count{font-size:.7rem;padding:1px 7px}[data-theme=dark] .category-lists .category-list>li.category-list-item{background:rgba(30,30,50,0.45);border-color:rgba(255,255,255,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.1)}[data-theme=dark] .category-lists .category-list-link{color:#e2e2f0 !important}[data-theme=dark] .category-lists .category-list-count{color:#a0a0c0 !important;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}[data-theme=dark] .category-lists .category-list-child .category-list-link{color:#a0a0c0 !important}</style><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Code Water" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">43</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">77</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p42.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-13T12:40:49.000Z" title="发表于 2026-07-13 20:40:49">2026-07-13</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-13T12:40:49.000Z" title="更新于 2026-07-13 20:40:49">2026-07-13</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/tools/">tools</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">1.6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>“网站打不开”这句话背后可能是完全不同的问题：网络本身断了、中间某一跳路由出故障、域名解析错了，或者目标服务压根没在监听。不分层排查，只会对着一个打不开的页面反复刷新，猜半天猜不出所以然。</p>
+<span id="more"></span>
+
+<p>这是 Linux 命令系列的一篇，承接 <a href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE">Linux 常见命令与工具地图</a>；跟之前写的 <a href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4">Linux 服务器问题排查</a> 是互补关系——那篇讲的是端口、进程、日志（<code>ss</code>、<code>lsof</code>），这篇补上”网络本身通不通、DNS 解析对不对”这一层。</p>
+<h2 id="ping：先确认最基本的连通性"><a href="#ping：先确认最基本的连通性" class="headerlink" title="ping：先确认最基本的连通性"></a>ping：先确认最基本的连通性</h2><p><code>ping</code> 基于 ICMP 协议，向目标主机发包并等待回应，用来测试连通性和延迟：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">ping -c 3 baidu.com</span><br><span class="line"><span class="comment">#     -c 3：只发 3 个探测包就停止，不加这个参数会一直发，要手动 Ctrl-C 停止</span></span><br><span class="line"></span><br><span class="line">64 bytes from 124.237.177.164: icmp_seq=0 ttl=54 time=124.8 ms</span><br><span class="line">64 bytes from 124.237.177.164: icmp_seq=1 ttl=54 time=125.6 ms</span><br><span class="line">64 bytes from 124.237.177.164: icmp_seq=2 ttl=54 time=127.1 ms</span><br><span class="line"><span class="comment">#     time：这一个包的往返延迟，数值越大网络越慢</span></span><br><span class="line"><span class="comment">#     ttl：包剩余的存活跳数，能大致反映经过了多少层网络设备（不用深究具体数值）</span></span><br></pre></td></tr></table></figure>
+
+<p>有个陷阱必须提前知道：<strong>ping 不通不等于网络真的不通</strong>。很多服务器和防火墙会主动屏蔽 ICMP 协议（出于安全考虑，避免被用来扫描存活主机），这种情况下 <code>ping</code> 完全无响应，但目标服务本身其实是正常的、能正常访问。遇到 <code>ping</code> 不通，不能直接下结论”网络挂了”，还得结合后面的手段继续排查。</p>
+<h2 id="traceroute：定位问题出在哪一跳"><a href="#traceroute：定位问题出在哪一跳" class="headerlink" title="traceroute：定位问题出在哪一跳"></a>traceroute：定位问题出在哪一跳</h2><p>如果 <code>ping</code> 确实不通，下一步是 <code>traceroute</code>——它能显示数据包从本机到目标主机，中间经过的每一跳路由，帮你定位问题出在链路上的哪一环：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">traceroute baidu.com</span><br><span class="line"></span><br><span class="line"> 1  192.168.1.1 (192.168.1.1)  2.336 ms  2.079 ms  2.250 ms</span><br><span class="line"> 2  10.169.144.154 (10.169.144.154)  31.583 ms</span><br><span class="line">    10.169.144.158 (10.169.144.158)  13.839 ms</span><br><span class="line">    10.169.144.186 (10.169.144.186)  7.618 ms</span><br><span class="line"> 3  10.185.174.254 (10.185.174.254)  10.458 ms  6.176 ms  6.550 ms</span><br><span class="line"><span class="comment">#     每一行是一跳，默认每跳发 3 个探测包（所以后面有 3 个时间值）</span></span><br><span class="line"><span class="comment">#     第 2 跳三次探测返回了不同的地址，说明这一跳背后是多条负载均衡的路径，属正常现象</span></span><br><span class="line"><span class="comment">#     某一跳如果显示 * * *，说明这一跳没有响应——可能是这个节点屏蔽了探测包，也可能是真的断在这里</span></span><br></pre></td></tr></table></figure>
+
+<p><code>traceroute</code> 的原理并不复杂：它给数据包设置一个从 1 开始递增的 TTL（存活跳数），TTL 为 1 的包到第一跳路由器就会被丢弃，路由器同时会回一个”TTL 耗尽”的 ICMP 消息，<code>traceroute</code> 借此拿到第一跳的地址；接着发 TTL 为 2 的包获取第二跳，以此类推，直到包真正到达目标主机为止。</p>
+<p>实战判断很直接：从某一跳开始持续超时或丢包，问题大概率就出在那一跳之后的链路上——如果那一跳是本地路由器，问题在本地网络；如果是运营商中间节点，问题可能不在你这边，得等或者换网络；如果一直跑到最后几跳才出问题，大概率是目标网络那边的事。</p>
+<h2 id="dig-nslookup：DNS-解析诊断"><a href="#dig-nslookup：DNS-解析诊断" class="headerlink" title="dig &#x2F; nslookup：DNS 解析诊断"></a>dig &#x2F; nslookup：DNS 解析诊断</h2><p><code>ping</code> 能通、<code>traceroute</code> 也能跑到目标，网站却还是打不开？这时候该查的是域名解析对不对——域名解析错了，访问的可能压根不是你以为的那台服务器：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">dig baidu.com</span><br><span class="line"></span><br><span class="line">;; QUESTION SECTION:</span><br><span class="line">;baidu.com.			IN	A</span><br><span class="line"></span><br><span class="line">;; ANSWER SECTION:</span><br><span class="line">baidu.com.		573	IN	A	124.237.177.164</span><br><span class="line">baidu.com.		573	IN	A	111.63.65.103</span><br><span class="line"></span><br><span class="line">;; Query time: 12 msec</span><br><span class="line">;; SERVER: 100.100.100.100#53(100.100.100.100)</span><br><span class="line"><span class="comment">#     QUESTION SECTION：查询了什么，这里是查 baidu.com 的 A 记录（域名对应的 IPv4 地址）</span></span><br><span class="line"><span class="comment">#     ANSWER SECTION：解析结果，一个域名可能对应多个 IP（负载均衡的常见做法）</span></span><br><span class="line"><span class="comment">#     Query time：这次查询耗时多久</span></span><br><span class="line"><span class="comment">#     SERVER：这次查询实际使用的是哪个 DNS 服务器——如果解析结果不对，先看看是不是用错了 DNS 服务器</span></span><br></pre></td></tr></table></figure>
+
+<p><code>nslookup</code> 也能查 DNS，输出比 <code>dig</code> 简洁很多：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">nslookup baidu.com</span><br><span class="line"></span><br><span class="line">Server:		100.100.100.100</span><br><span class="line">Address:	100.100.100.100#53</span><br><span class="line"></span><br><span class="line">Non-authoritative answer:</span><br><span class="line">Name:	baidu.com</span><br><span class="line">Address: 124.237.177.164</span><br><span class="line"><span class="comment">#     一样能看出用的哪个 DNS 服务器（Server）、解析出来的地址（Address）</span></span><br><span class="line"><span class="comment">#     但信息量明显没有 dig 详细——没有 TTL、没有查询耗时</span></span><br></pre></td></tr></table></figure>
+
+<p>日常排查优先用 <code>dig</code>，信息更全；<code>nslookup</code> 胜在几乎所有系统都自带，个别精简系统没装 <code>dig</code> 时可以顶上用。</p>
+<h2 id="综合排查流程"><a href="#综合排查流程" class="headerlink" title="综合排查流程"></a>综合排查流程</h2><p>网站&#x2F;服务连不上，按这个顺序排查效率最高：</p>
+<ol>
+<li><strong><code>ping</code> 测网络层连通性</strong>——通了，跳到第 3 步；不通，先确认目标是不是屏蔽了 ICMP（比如用 <code>curl</code> 试一下能不能正常拿到响应），排除这个可能之后再进第 2 步</li>
+<li><strong><code>traceroute</code> 定位断在哪一跳</strong>——找到持续超时&#x2F;丢包开始的那一跳，判断问题出在本地网络、中间运营商还是目标网络</li>
+<li><strong><code>dig</code> 确认域名解析对不对</strong>——解析出来的 IP 跟预期不符，问题在 DNS 这一层，检查用的 DNS 服务器或者域名解析配置</li>
+<li><strong>解析也对、网络也通，但服务还是连不上</strong>——大概率是端口没监听或者防火墙拦截，这部分排查见 <a href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4">Linux 服务器问题排查</a> 里 <code>ss</code>、<code>lsof</code> 的用法</li>
+</ol>
+<p>这四步覆盖了从”网络本身”到”DNS”再到”目标服务”的完整链路，按顺序排查比凭感觉瞎试快得多。</p>
+<h2 id="写到这里"><a href="#写到这里" class="headerlink" title="写到这里"></a>写到这里</h2><p><code>ping</code>、<code>traceroute</code>、<code>dig</code> 这三个工具分别对应网络排查的三个不同层次——连通性、路径、解析。记住这个分层，遇到”连不上”这类模糊的问题，就能很快把它拆解成一个个具体的、可以验证的假设，而不是对着报错信息干瞪眼。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/%E7%BD%91%E7%BB%9C%E8%BF%9E%E9%80%9A%E6%80%A7%E8%AF%8A%E6%96%AD-ping-traceroute%E4%B8%8Edig%E5%AE%9E%E6%88%98/">https://blog.codewater.top/%E7%BD%91%E7%BB%9C%E8%BF%9E%E9%80%9A%E6%80%A7%E8%AF%8A%E6%96%AD-ping-traceroute%E4%B8%8Edig%E5%AE%9E%E6%88%98/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/CLI/">CLI</a><a class="post-meta__tags" href="/tags/Linux/">Linux</a><a class="post-meta__tags" href="/tags/%E5%91%BD%E4%BB%A4%E8%A1%8C/">命令行</a><a class="post-meta__tags" href="/tags/%E7%BD%91%E7%BB%9C/">网络</a></div><div class="post-share"><div class="social-share" data-image="/img/p42.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/sed%E4%B8%8Eawk%E5%AE%9E%E6%88%98%E5%AF%B9%E6%AF%94-%E6%96%87%E6%9C%AC%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7%E6%80%8E%E4%B9%88%E9%80%89/" title="sed 与 awk 实战对比：什么时候该用哪个"><img class="cover" src="/img/p41.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">sed 与 awk 实战对比：什么时候该用哪个</div></div><div class="info-2"><div class="info-item-1">sed 面向行替换，awk 面向列处理：s 命令、-i 跨平台坑、NF/NR 怎么用与选型判断。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/" title="vim 基本操作：从模式切换到保存退出"><img class="cover" src="/img/p38.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-13</div><div class="info-item-2">vim 基本操作：从模式切换到保存退出</div></div><div class="info-2"><div class="info-item-1">vim 的 Normal/Insert 模式是什么、怎么退出、hjkl 怎么移动、dd/yy/p 怎么编辑、%s 怎么全局替换，一篇学会基础操作。</div></div></div></a><a class="pagination-related" href="/xargs%E7%AE%A1%E9%81%93%E4%B8%8ELinux%E5%91%BD%E4%BB%A4%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6/" title="xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件"><img class="cover" src="/img/p36.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">xargs、管道与 Linux 命令设计哲学：为什么 find | rm 删不掉任何文件</div></div><div class="info-2"><div class="info-item-1">管道的本质是什么、为什么有些命令吃 stdin 有些只认参数、xargs 怎么架桥，以及背后支撑整个 Linux 命令行的 Unix 设计哲学。</div></div></div></a><a class="pagination-related" href="/%E4%B8%8D%E7%86%9F%E6%82%89%E7%9A%84%E5%91%BD%E4%BB%A4%E6%80%8E%E4%B9%88%E5%BF%AB%E9%80%9F%E6%90%9E%E6%87%82-man%E9%A1%B5%E9%9D%A2%E7%BB%93%E6%9E%84%E4%B8%8Eapropos%E9%80%9F%E6%9F%A5/" title="不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查"><img class="cover" src="/img/p37.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-13</div><div class="info-item-2">不熟悉的命令怎么快速搞懂：man 页面结构、apropos 搜索与 --help 速查</div></div><div class="info-2"><div class="info-item-1">遇到不认识的命令或忘了参数怎么办：man 页面固定结构怎么读、apropos 怎么按关键词搜命令、--help 怎么用。</div></div></div></a><a class="pagination-related" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img class="cover" src="/img/p30.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-09</div><div class="info-item-2">Linux 常见命令与工具地图(备忘录)</div></div><div class="info-2"><div class="info-item-1">按场景分类的 Linux 命令速查地图：文件、文本处理、进程、网络、权限、包管理、压缩传输、Git，每条一句话说明用途，配合详细文章深入用法。</div></div></div></a><a class="pagination-related" href="/%E5%91%BD%E4%BB%A4%E8%A1%8C%E7%BC%96%E8%BE%91%E8%BF%9B%E9%98%B6-Emacs%E5%BF%AB%E6%8D%B7%E9%94%AE%E4%B8%8E%E7%94%A9%E8%BF%9Bvim%E7%BC%96%E8%BE%91/" title="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行"><img class="cover" src="/img/p39.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-13</div><div class="info-item-2">命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行</div></div><div class="info-2"><div class="info-item-1">bash/zsh 默认是 Emacs 键位：Ctrl-A/E/W/U/K/Y 怎么用、Ctrl-X Ctrl-E 甩进编辑器改命令，附 vim 跳转指定行技巧。</div></div></div></a><a class="pagination-related" href="/sed%E4%B8%8Eawk%E5%AE%9E%E6%88%98%E5%AF%B9%E6%AF%94-%E6%96%87%E6%9C%AC%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7%E6%80%8E%E4%B9%88%E9%80%89/" title="sed 与 awk 实战对比：什么时候该用哪个"><img class="cover" src="/img/p41.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-13</div><div class="info-item-2">sed 与 awk 实战对比：什么时候该用哪个</div></div><div class="info-2"><div class="info-item-1">sed 面向行替换，awk 面向列处理：s 命令、-i 跨平台坑、NF/NR 怎么用与选型判断。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">43</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">77</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ping%EF%BC%9A%E5%85%88%E7%A1%AE%E8%AE%A4%E6%9C%80%E5%9F%BA%E6%9C%AC%E7%9A%84%E8%BF%9E%E9%80%9A%E6%80%A7"><span class="toc-number">1.</span> <span class="toc-text">ping：先确认最基本的连通性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#traceroute%EF%BC%9A%E5%AE%9A%E4%BD%8D%E9%97%AE%E9%A2%98%E5%87%BA%E5%9C%A8%E5%93%AA%E4%B8%80%E8%B7%B3"><span class="toc-number">2.</span> <span class="toc-text">traceroute：定位问题出在哪一跳</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#dig-nslookup%EF%BC%9ADNS-%E8%A7%A3%E6%9E%90%E8%AF%8A%E6%96%AD"><span class="toc-number">3.</span> <span class="toc-text">dig &#x2F; nslookup：DNS 解析诊断</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%BC%E5%90%88%E6%8E%92%E6%9F%A5%E6%B5%81%E7%A8%8B"><span class="toc-number">4.</span> <span class="toc-text">综合排查流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%88%B0%E8%BF%99%E9%87%8C"><span class="toc-number">5.</span> <span class="toc-text">写到这里</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/%E7%BD%91%E7%BB%9C%E8%BF%9E%E9%80%9A%E6%80%A7%E8%AF%8A%E6%96%AD-ping-traceroute%E4%B8%8Edig%E5%AE%9E%E6%88%98/" title="网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战"><img src="/img/p42.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战"/></a><div class="content"><a class="title" href="/%E7%BD%91%E7%BB%9C%E8%BF%9E%E9%80%9A%E6%80%A7%E8%AF%8A%E6%96%AD-ping-traceroute%E4%B8%8Edig%E5%AE%9E%E6%88%98/" title="网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战">网络连不上怎么排查：ping、traceroute 与 dig/nslookup 实战</a><time datetime="2026-07-13T12:40:49.000Z" title="发表于 2026-07-13 20:40:49">2026-07-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/sed%E4%B8%8Eawk%E5%AE%9E%E6%88%98%E5%AF%B9%E6%AF%94-%E6%96%87%E6%9C%AC%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7%E6%80%8E%E4%B9%88%E9%80%89/" title="sed 与 awk 实战对比：什么时候该用哪个"><img src="/img/p41.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="sed 与 awk 实战对比：什么时候该用哪个"/></a><div class="content"><a class="title" href="/sed%E4%B8%8Eawk%E5%AE%9E%E6%88%98%E5%AF%B9%E6%AF%94-%E6%96%87%E6%9C%AC%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7%E6%80%8E%E4%B9%88%E9%80%89/" title="sed 与 awk 实战对比：什么时候该用哪个">sed 与 awk 实战对比：什么时候该用哪个</a><time datetime="2026-07-13T12:38:05.000Z" title="发表于 2026-07-13 20:38:05">2026-07-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/rsync%E5%A2%9E%E9%87%8F%E5%90%8C%E6%AD%A5%E5%AE%9E%E6%88%98-%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0%E4%B8%8E%E8%BF%9C%E7%A8%8B%E5%90%8C%E6%AD%A5/" title="rsync 增量同步实战：常用参数、排除规则与远程同步"><img src="/img/p40.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="rsync 增量同步实战：常用参数、排除规则与远程同步"/></a><div class="content"><a class="title" href="/rsync%E5%A2%9E%E9%87%8F%E5%90%8C%E6%AD%A5%E5%AE%9E%E6%88%98-%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0%E4%B8%8E%E8%BF%9C%E7%A8%8B%E5%90%8C%E6%AD%A5/" title="rsync 增量同步实战：常用参数、排除规则与远程同步">rsync 增量同步实战：常用参数、排除规则与远程同步</a><time datetime="2026-07-13T12:35:28.000Z" title="发表于 2026-07-13 20:35:28">2026-07-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/%E5%91%BD%E4%BB%A4%E8%A1%8C%E7%BC%96%E8%BE%91%E8%BF%9B%E9%98%B6-Emacs%E5%BF%AB%E6%8D%B7%E9%94%AE%E4%B8%8E%E7%94%A9%E8%BF%9Bvim%E7%BC%96%E8%BE%91/" title="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行"><img src="/img/p39.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行"/></a><div class="content"><a class="title" href="/%E5%91%BD%E4%BB%A4%E8%A1%8C%E7%BC%96%E8%BE%91%E8%BF%9B%E9%98%B6-Emacs%E5%BF%AB%E6%8D%B7%E9%94%AE%E4%B8%8E%E7%94%A9%E8%BF%9Bvim%E7%BC%96%E8%BE%91/" title="命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行">命令行编辑进阶：Emacs 快捷键、甩进 vim 编辑命令行与跳转到指定行</a><time datetime="2026-07-12T16:30:02.000Z" title="发表于 2026-07-13 00:30:02">2026-07-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/" title="vim 基本操作：从模式切换到保存退出"><img src="/img/p38.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="vim 基本操作：从模式切换到保存退出"/></a><div class="content"><a class="title" href="/vim%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C-%E6%A8%A1%E5%BC%8F%E5%88%87%E6%8D%A2%E5%88%B0%E4%BF%9D%E5%AD%98%E9%80%80%E5%87%BA/" title="vim 基本操作：从模式切换到保存退出">vim 基本操作：从模式切换到保存退出</a><time datetime="2026-07-12T16:23:35.000Z" title="发表于 2026-07-13 00:23:35">2026-07-13</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script>function injectCategoryDesc(){var el=document.querySelector('.category-lists');if(!el||el.nextElementSibling&&el.nextElementSibling.id==='cat-desc')return;var desc=document.createElement('div');desc.id='cat-desc';desc.style.cssText='margin-top:28px;padding:20px 24px;background:rgba(255,255,255,0.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.45);border-radius:14px;';desc.innerHTML='<h3 style="margin:0 0 14px;font-size:.95rem;font-weight:700;color:#3b3b5c;">各分类说明</h3><table style="width:100%;border-collapse:collapse;font-size:.875rem;"><tbody><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">tools</td><td style="padding:8px 12px;color:#5a5a7a;">工具链系列，覆盖终端、Shell、搜索、文件管理、Git TUI、编辑器等；也包含 tldr、git tag 等命令速查</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">golang</td><td style="padding:8px 12px;color:#5a5a7a;">Go 后端实战：常见业务问题解决方案实现</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">git</td><td style="padding:8px 12px;color:#5a5a7a;">Git 常见使用方式以及操作技巧</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">ai</td><td style="padding:8px 12px;color:#5a5a7a;"> ai 相关使用和分享</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">cursor</td><td style="padding:8px 12px;color:#5a5a7a;">Cursor 编辑器：使用场景和难点</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">Hexo</td><td style="padding:8px 12px;color:#5a5a7a;">hexo 搭建博客的常见配置技巧</td></tr><tr><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">problem</td><td style="padding:8px 12px;color:#5a5a7a;">记录各种问题报错的排查过程</td></tr></tbody></table>';el.after(desc);}document.addEventListener('DOMContentLoaded',injectCategoryDesc);document.addEventListener('pjax:complete',injectCategoryDesc);</script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>
