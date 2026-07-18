@@ -1,0 +1,571 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>crontab 定时任务实战：时间字段、环境变量坑与日志排查 | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="crontab 五个时间字段怎么写、-e&#x2F;-l 常用操作、任务不执行九成是 PATH 问题：定时任务实战。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="crontab 定时任务实战：时间字段、环境变量坑与日志排查">
+<meta property="og:url" content="https://blog.codewater.top/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="crontab 五个时间字段怎么写、-e&#x2F;-l 常用操作、任务不执行九成是 PATH 问题：定时任务实战。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p53.jpg">
+<meta property="article:published_time" content="2026-07-17T09:41:40.000Z">
+<meta property="article:modified_time" content="2026-07-18T04:59:36.000Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="CLI">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="crontab">
+<meta property="article:tag" content="运维">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p53.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "crontab 定时任务实战：时间字段、环境变量坑与日志排查",
+  "url": "https://blog.codewater.top/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/",
+  "image": "https://blog.codewater.top/img/p53.jpg",
+  "datePublished": "2026-07-17T09:41:40.000Z",
+  "dateModified": "2026-07-18T04:59:36.000Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'crontab 定时任务实战：时间字段、环境变量坑与日志排查',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><style>.category-lists{background:linear-gradient(135deg,#667eea55,#f5576c44,#4facfe44,#43e97b44);border-radius:20px;padding:28px !important;position:relative;overflow:hidden}.category-lists::before{content:'';position:absolute;top:-80px;left:-80px;width:240px;height:240px;background:radial-gradient(circle,#a78bfa88,transparent 70%);border-radius:50%;pointer-events:none}.category-lists::after{content:'';position:absolute;bottom:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,#f9a8d488,transparent 70%);border-radius:50%;pointer-events:none}.category-lists .category-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;padding:0 !important;list-style:none !important;margin:0 !important;position:relative;z-index:1}.category-lists .category-list>li.category-list-item{background:rgba(255,255,255,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.55);border-radius:14px;padding:22px 20px 18px;margin:0 !important;box-shadow:0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.7);transition:transform .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}.category-lists .category-list>li.category-list-item::before{display:none !important}.category-lists .category-list>li.category-list-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.7)}.category-lists .category-list-link{font-size:1rem;font-weight:700;color:#3b3b5c !important;display:block;margin-bottom:10px;line-height:1.3}.category-lists .category-list-count{display:inline-block;font-size:.78rem;font-weight:600;color:#5a5a7a !important;background:rgba(255,255,255,0.5);padding:2px 10px;border-radius:20px;margin-left:0 !important;border:1px solid rgba(255,255,255,0.7)}.category-lists .category-list-count::before,.category-lists .category-list-count::after{content:'' !important}.category-lists .category-list-child{margin-top:10px;padding:10px 0 0 0 !important;border-top:1px solid rgba(255,255,255,0.4) !important;list-style:none !important}.category-lists .category-list-child li.category-list-item{margin:5px 0 !important;padding:0 !important}.category-lists .category-list-child li.category-list-item::before{display:none !important}.category-lists .category-list-child .category-list-link{font-size:.82rem;font-weight:400;color:#5a5a7a !important;margin-bottom:0}.category-lists .category-list-child .category-list-count{font-size:.7rem;padding:1px 7px}[data-theme=dark] .category-lists .category-list>li.category-list-item{background:rgba(30,30,50,0.45);border-color:rgba(255,255,255,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.1)}[data-theme=dark] .category-lists .category-list-link{color:#e2e2f0 !important}[data-theme=dark] .category-lists .category-list-count{color:#a0a0c0 !important;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}[data-theme=dark] .category-lists .category-list-child .category-list-link{color:#a0a0c0 !important}</style><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Code Water" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">55</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">87</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p53.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">crontab 定时任务实战：时间字段、环境变量坑与日志排查</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">crontab 定时任务实战：时间字段、环境变量坑与日志排查</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-17T09:41:40.000Z" title="发表于 2026-07-17 17:41:40">2026-07-17</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-18T04:59:36.000Z" title="更新于 2026-07-18 12:59:36">2026-07-18</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/tools/">tools</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">1.8k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>脚本手动跑得好好的，放进 crontab 就是不执行——没有报错、没有输出，像被吞掉了一样。这是 crontab 最经典的翻车现场，九成指向同一个原因（后面讲），但先把 crontab 本身理顺。</p>
+<span id="more"></span>
+
+<p>这是 Linux 命令系列的一篇，承接 <a href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE">Linux 常见命令与工具地图</a>。<code>cron</code> 是类 Unix 系统的定时任务守护进程，<code>crontab</code> 是管理它的命令——每个用户有一份自己的任务表，按设定的时间自动执行命令。</p>
+<h2 id="基本操作：-e、-l，以及要避开的-r"><a href="#基本操作：-e、-l，以及要避开的-r" class="headerlink" title="基本操作：-e、-l，以及要避开的 -r"></a>基本操作：-e、-l，以及要避开的 -r</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">crontab -e</span><br><span class="line"><span class="comment">#     编辑当前用户的任务表，用 $EDITOR 打开，保存退出即生效</span></span><br><span class="line"><span class="comment">#     每个用户一份独立的 crontab，互不干扰</span></span><br><span class="line"></span><br><span class="line">crontab -l</span><br><span class="line"><span class="comment">#     列出当前用户的所有定时任务</span></span><br><span class="line"></span><br><span class="line">crontab -r</span><br><span class="line"><span class="comment">#     ⚠️ 删除当前用户的整个任务表——没有任何确认提示，敲下回车全没了</span></span><br><span class="line"><span class="comment">#     -r 和 -e 在键盘上挨着，手滑的代价是全部任务瞬间蒸发</span></span><br><span class="line"><span class="comment">#     建议：永远用 -e 进去删掉某一行，别用 -r</span></span><br></pre></td></tr></table></figure>
+
+<p>被 <code>-r</code> 清空且没有备份的话，任务表找不回来。有个简单的保险：定期 <code>crontab -l &gt; ~/crontab.bak</code> 备份一份。</p>
+<h2 id="五个时间字段：分-时-日-月-周"><a href="#五个时间字段：分-时-日-月-周" class="headerlink" title="五个时间字段：分 时 日 月 周"></a>五个时间字段：分 时 日 月 周</h2><p>crontab 每行由五个时间字段加一条命令组成，字段顺序固定：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">┌───────── 分钟 (0-59)</span><br><span class="line">│ ┌─────── 小时 (0-23)</span><br><span class="line">│ │ ┌───── 日   (1-31)</span><br><span class="line">│ │ │ ┌─── 月   (1-12)</span><br><span class="line">│ │ │ │ ┌─ 周几 (0-7，0 和 7 都是周日)</span><br><span class="line">│ │ │ │ │</span><br><span class="line">*  *  *  *  *  要执行的命令</span><br></pre></td></tr></table></figure>
+
+<p>四种常用写法，组合起来能表达绝大多数调度需求：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">0 3 * * * /opt/scripts/backup.sh</span><br><span class="line"><span class="comment">#     每天凌晨 3:00 执行——* 表示&quot;每一个&quot;，分钟填 0、小时填 3，其余全通配</span></span><br><span class="line"></span><br><span class="line">*/5 * * * * /opt/scripts/check.sh</span><br><span class="line"><span class="comment">#     每 5 分钟执行一次——*/N 表示&quot;每隔 N&quot;</span></span><br><span class="line"></span><br><span class="line">0 9 * * 1-5 /opt/scripts/report.sh</span><br><span class="line"><span class="comment">#     工作日（周一到周五）每天 9:00——N-M 表示连续范围</span></span><br><span class="line"></span><br><span class="line">0 8 1,15 * * /opt/scripts/remind.sh</span><br><span class="line"><span class="comment">#     每月 1 号和 15 号的 8:00——N,M 表示离散的几个值</span></span><br></pre></td></tr></table></figure>
+
+<p>还有一组快捷写法，替代整个五字段：<code>@daily</code>（每天零点）、<code>@hourly</code>、<code>@weekly</code>、<code>@monthly</code>，以及比较特殊的 <code>@reboot</code>（系统启动时执行一次）。</p>
+<h2 id="任务不执行的头号原因：cron-的环境变量是极简的"><a href="#任务不执行的头号原因：cron-的环境变量是极简的" class="headerlink" title="任务不执行的头号原因：cron 的环境变量是极简的"></a>任务不执行的头号原因：cron 的环境变量是极简的</h2><p>回到开头的问题。cron 执行任务时<strong>不加载你的 shell 配置</strong>——<code>.bashrc</code>、<code>.zshrc</code>、<code>.profile</code> 统统不读，<code>PATH</code> 通常只有 <code>/usr/bin:/bin</code> 这么两截。你手动跑脚本没问题，是因为交互 shell 里 PATH 齐全；cron 里同一条命令找不到可执行文件，就静默失败了。</p>
+<p>两种解法，任选或同时用：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">which</span> node</span><br><span class="line"><span class="comment">#     先用 which 查出命令的绝对路径，比如 /usr/local/bin/node</span></span><br><span class="line"></span><br><span class="line">0 3 * * * /usr/local/bin/node /opt/app/task.js</span><br><span class="line"><span class="comment">#     解法一：crontab 里所有命令一律写绝对路径，包括脚本里调用的命令</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SHELL=/bin/bash</span><br><span class="line">PATH=/usr/local/bin:/usr/bin:/bin</span><br><span class="line">0 3 * * * node /opt/app/task.js</span><br><span class="line"><span class="comment">#     解法二：在 crontab 文件顶部显式声明 PATH 和 SHELL</span></span><br><span class="line"><span class="comment">#     声明之后，下面所有任务行都在这个环境下执行</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="输出去哪了：重定向到日志"><a href="#输出去哪了：重定向到日志" class="headerlink" title="输出去哪了：重定向到日志"></a>输出去哪了：重定向到日志</h2><p>任务的输出（stdout 和 stderr）默认会尝试通过本地邮件发给用户——绝大多数服务器根本没配邮件服务，输出就这么无声消失了，出错也看不到错误信息。标准做法是自己重定向：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">0 3 * * * /opt/scripts/backup.sh &gt;&gt; /var/log/backup.log 2&gt;&amp;1</span><br><span class="line"><span class="comment">#     &gt;&gt; 追加写入日志文件（&gt; 是覆盖写，日志要用追加）</span></span><br><span class="line"><span class="comment">#     2&gt;&amp;1 拆开看：程序有两条输出通道，1 是标准输出（正常输出），2 是标准错误（报错信息）</span></span><br><span class="line"><span class="comment">#     &gt;&gt; 只接管了通道 1；&quot;2&gt;&amp;1&quot; 的意思是&quot;让通道 2 也指向通道 1 当前指向的地方&quot;</span></span><br><span class="line"><span class="comment">#     合起来：正常输出和报错都进这个日志文件——排查任务失败时，报错信息才是最想要的那部分</span></span><br><span class="line"><span class="comment">#     顺序有讲究：2&gt;&amp;1 必须写在 &gt;&gt; 文件 的后面，先定好 1 去哪，2 才能跟对地方</span></span><br></pre></td></tr></table></figure>
+
+<p>怀疑任务压根没被触发（而不是执行出错）时，查 cron 自己的日志：</p>
+<p>cron 服务的名字随发行版不同：Debian&#x2F;Ubuntu 系叫 <code>cron</code>，RHEL&#x2F;CentOS 系叫 <code>crond</code>——先确认自己机器上是哪个，再查它的日志：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">systemctl list-units --<span class="built_in">type</span>=service | grep -E <span class="string">&quot;cron&quot;</span></span><br><span class="line"><span class="comment">#     确认本机的服务名到底是 cron 还是 crond</span></span><br><span class="line"></span><br><span class="line">journalctl -u cron -n 50</span><br><span class="line"><span class="comment">#     看 cron 服务最近 50 条日志，每次任务触发都有记录</span></span><br><span class="line"><span class="comment">#     RHEL/CentOS 系把 cron 换成 crond；journalctl 的过滤用法在 systemctl 那篇讲过</span></span><br><span class="line"><span class="comment">#     没有 systemd 的老系统翻 /var/log/syslog 或 /var/log/cron</span></span><br></pre></td></tr></table></figure>
+
+<p>日志里有触发记录但结果不对 → 执行环境问题（八成是上一节的 PATH）；连触发记录都没有 → 时间字段写错了。</p>
+<h2 id="一个专属坑：-需要转义"><a href="#一个专属坑：-需要转义" class="headerlink" title="一个专属坑：% 需要转义"></a>一个专属坑：% 需要转义</h2><p>crontab 的命令部分里，<code>%</code> 是特殊字符——未转义的 <code>%</code> 会被当成换行符，它之后的内容全部作为标准输入喂给命令（<code>man 5 crontab</code> 原文如此）。最常见的踩法是在文件名里用 <code>date</code> 生成日期：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">0 3 * * * tar -czf /backup/logs-$(<span class="built_in">date</span> +\%F).tar.gz -C /var/log . </span><br><span class="line"><span class="comment">#     date +%F 输出 2026-07-17 这种格式，但 % 必须写成 \%</span></span><br><span class="line"><span class="comment">#     不转义的话命令会在 % 处被截断，任务安静地失败，非常难查</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="实战：每天凌晨增量备份"><a href="#实战：每天凌晨增量备份" class="headerlink" title="实战：每天凌晨增量备份"></a>实战：每天凌晨增量备份</h2><p>把前面的点串成一个真实任务——每天凌晨 3 点用 rsync 做增量备份，写日志、防 PATH 坑：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">PATH=/usr/local/bin:/usr/bin:/bin</span><br><span class="line">0 3 * * * rsync -a --delete /data/ /backup/data/ &gt;&gt; /var/log/backup.log 2&gt;&amp;1</span><br><span class="line"><span class="comment">#     rsync 的 -a、--delete 参数含义见 rsync 那篇</span></span><br><span class="line"><span class="comment">#     顶部声明 PATH，输出进日志，时间字段&quot;每天 3:00&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>需求再复杂一点——比如”上一次没跑完就别启动下一次””失败自动重试””依赖网络就绪”——crontab 就力不从心了，那是 systemd timer 的领域，配合 <a href="/systemctl-journalctl%E5%AE%9E%E6%88%98-%E6%9C%8D%E5%8A%A1%E7%AE%A1%E7%90%86%E4%B8%8E%E6%97%A5%E5%BF%97%E8%BF%87%E6%BB%A4">systemctl 那篇</a> 的 unit 文件一起用。日常的定时脚本，crontab 足够。</p>
+<h2 id="常用操作速查表"><a href="#常用操作速查表" class="headerlink" title="常用操作速查表"></a>常用操作速查表</h2><table>
+<thead>
+<tr>
+<th>操作&#x2F;写法</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>crontab -e</code></td>
+<td>编辑任务表，保存即生效</td>
+</tr>
+<tr>
+<td><code>crontab -l</code></td>
+<td>查看任务表；<code>crontab -l &gt; 备份文件</code> 定期备份</td>
+</tr>
+<tr>
+<td><code>crontab -r</code></td>
+<td>无确认清空全部任务，慎用，建议永远用 -e 删行</td>
+</tr>
+<tr>
+<td>五字段顺序</td>
+<td>分 时 日 月 周</td>
+</tr>
+<tr>
+<td><code>*/5</code> &#x2F; <code>1-5</code> &#x2F; <code>1,15</code></td>
+<td>每隔 5 &#x2F; 连续范围 &#x2F; 离散值</td>
+</tr>
+<tr>
+<td><code>@daily</code> &#x2F; <code>@reboot</code></td>
+<td>每天零点 &#x2F; 开机执行一次</td>
+</tr>
+<tr>
+<td>PATH 坑</td>
+<td>cron 不读 shell 配置，命令写绝对路径或顶部声明 PATH</td>
+</tr>
+<tr>
+<td><code>&gt;&gt; 日志 2&gt;&amp;1</code></td>
+<td>输出重定向进日志，否则静默消失</td>
+</tr>
+<tr>
+<td><code>journalctl -u cron</code></td>
+<td>确认任务有没有被触发</td>
+</tr>
+<tr>
+<td><code>\%</code></td>
+<td>命令里的 % 必须转义，否则命令被截断</td>
+</tr>
+</tbody></table>
+<h2 id="写到这里"><a href="#写到这里" class="headerlink" title="写到这里"></a>写到这里</h2><p>crontab 的语法五分钟就能学会，真正拉开差距的是那几个坑：环境变量极简（绝对路径&#x2F;声明 PATH）、输出会消失（重定向日志）、<code>%</code> 要转义、<code>-r</code> 别碰。把这四条焊在肌肉记忆里，定时任务”静默失败”的排查时间能从几小时缩到几分钟。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/">https://blog.codewater.top/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/CLI/">CLI</a><a class="post-meta__tags" href="/tags/Linux/">Linux</a><a class="post-meta__tags" href="/tags/crontab/">crontab</a><a class="post-meta__tags" href="/tags/%E8%BF%90%E7%BB%B4/">运维</a></div><div class="post-share"><div class="social-share" data-image="/img/p53.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/" title="ln 软硬链接实战：inode、删除行为与相对路径坑"><img class="cover" src="/img/p54.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">ln 软硬链接实战：inode、删除行为与相对路径坑</div></div><div class="info-2"><div class="info-item-1">ln 硬链接和软链接差在哪：inode 原理、删除行为的区别、软链接相对路径的坑一篇讲清。</div></div></div></a><a class="pagination-related" href="/ss-lsof%E6%B7%B1%E5%85%A5-TCP%E8%BF%9E%E6%8E%A5%E7%8A%B6%E6%80%81%E4%B8%8E%E5%B7%B2%E5%88%A0%E9%99%A4%E6%96%87%E4%BB%B6%E5%8D%A0%E7%A3%81%E7%9B%98/" title="ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件"><img class="cover" src="/img/p52.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件</div></div><div class="info-2"><div class="info-item-1">ss 看 TCP 连接状态：TIME_WAIT/CLOSE_WAIT 说明什么；lsof 揪出已删除却还占磁盘的文件。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/ss-lsof%E6%B7%B1%E5%85%A5-TCP%E8%BF%9E%E6%8E%A5%E7%8A%B6%E6%80%81%E4%B8%8E%E5%B7%B2%E5%88%A0%E9%99%A4%E6%96%87%E4%BB%B6%E5%8D%A0%E7%A3%81%E7%9B%98/" title="ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件"><img class="cover" src="/img/p52.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-17</div><div class="info-item-2">ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件</div></div><div class="info-2"><div class="info-item-1">ss 看 TCP 连接状态：TIME_WAIT/CLOSE_WAIT 说明什么；lsof 揪出已删除却还占磁盘的文件。</div></div></div></a><a class="pagination-related" href="/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%92%E6%9F%A5%E6%9C%8D%E5%8A%A1%E9%97%AE%E9%A2%98%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/" title="Linux 服务器问题排查：端口、进程、日志常用命令速查"><img class="cover" src="/img/p22.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">Linux 服务器问题排查：端口、进程、日志常用命令速查</div></div><div class="info-2"><div class="info-item-1">Linux 服务器问题排查常用命令速查：ss/lsof 查端口占用，ps/top 看进程状态，systemctl/journalctl 管理服务和查日志，curl/dig 测网络连通，df/du/free 看磁盘内存，附完整排查流程。</div></div></div></a><a class="pagination-related" href="/systemctl-journalctl%E5%AE%9E%E6%88%98-%E6%9C%8D%E5%8A%A1%E7%AE%A1%E7%90%86%E4%B8%8E%E6%97%A5%E5%BF%97%E8%BF%87%E6%BB%A4/" title="systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤"><img class="cover" src="/img/p50.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤</div></div><div class="info-2"><div class="info-item-1">systemctl 的 enable 和 start 有什么区别、unit 文件放哪、journalctl 怎么按时间和级别过滤日志。</div></div></div></a><a class="pagination-related" href="/cut-sort-uniq-wc-jq%E6%96%87%E6%9C%AC%E5%B0%8F%E5%B7%A5%E5%85%B7%E7%BB%84%E5%90%88%E6%8B%B3%E5%AE%9E%E6%88%98/" title="cut、sort、uniq、wc、jq 实战：小工具组合怎么顶一个 awk 脚本"><img class="cover" src="/img/p45.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">cut、sort、uniq、wc、jq 实战：小工具组合怎么顶一个 awk 脚本</div></div><div class="info-2"><div class="info-item-1">cut 截取列、sort 排序、uniq 去重计数、wc 统计、jq 处理 JSON，组合替代 awk 脚本。</div></div></div></a><a class="pagination-related" href="/kill%E4%BF%A1%E5%8F%B7%E6%9C%BA%E5%88%B6%E4%B8%8Enice%E4%BC%98%E5%85%88%E7%BA%A7%E5%AE%9E%E6%88%98/" title="kill 默认不是&quot;杀死&quot;：进程信号与 nice 优先级实战"><img class="cover" src="/img/p47.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">kill 默认不是&quot;杀死&quot;：进程信号与 nice 优先级实战</div></div><div class="info-2"><div class="info-item-1">kill 默认发的不是杀死信号：SIGTERM/SIGKILL/SIGHUP 区别、pkill 按名杀进程与 nice 优先级。</div></div></div></a><a class="pagination-related" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"><img class="cover" src="/img/p35.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定</div></div><div class="info-2"><div class="info-item-1">短选项和长选项是什么关系、为什么 grep -v 和 node -v 意思完全不同、-- 怎么用，讲清楚 Linux 命令行选项背后没有强制标准的设计约定。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">55</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">87</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C%EF%BC%9A-e%E3%80%81-l%EF%BC%8C%E4%BB%A5%E5%8F%8A%E8%A6%81%E9%81%BF%E5%BC%80%E7%9A%84-r"><span class="toc-number">1.</span> <span class="toc-text">基本操作：-e、-l，以及要避开的 -r</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E4%B8%AA%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%EF%BC%9A%E5%88%86-%E6%97%B6-%E6%97%A5-%E6%9C%88-%E5%91%A8"><span class="toc-number">2.</span> <span class="toc-text">五个时间字段：分 时 日 月 周</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%BB%E5%8A%A1%E4%B8%8D%E6%89%A7%E8%A1%8C%E7%9A%84%E5%A4%B4%E5%8F%B7%E5%8E%9F%E5%9B%A0%EF%BC%9Acron-%E7%9A%84%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E6%98%AF%E6%9E%81%E7%AE%80%E7%9A%84"><span class="toc-number">3.</span> <span class="toc-text">任务不执行的头号原因：cron 的环境变量是极简的</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E5%8E%BB%E5%93%AA%E4%BA%86%EF%BC%9A%E9%87%8D%E5%AE%9A%E5%90%91%E5%88%B0%E6%97%A5%E5%BF%97"><span class="toc-number">4.</span> <span class="toc-text">输出去哪了：重定向到日志</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E4%B8%AA%E4%B8%93%E5%B1%9E%E5%9D%91%EF%BC%9A-%E9%9C%80%E8%A6%81%E8%BD%AC%E4%B9%89"><span class="toc-number">5.</span> <span class="toc-text">一个专属坑：% 需要转义</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E6%88%98%EF%BC%9A%E6%AF%8F%E5%A4%A9%E5%87%8C%E6%99%A8%E5%A2%9E%E9%87%8F%E5%A4%87%E4%BB%BD"><span class="toc-number">6.</span> <span class="toc-text">实战：每天凌晨增量备份</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">7.</span> <span class="toc-text">常用操作速查表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%88%B0%E8%BF%99%E9%87%8C"><span class="toc-number">8.</span> <span class="toc-text">写到这里</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/" title="ln 软硬链接实战：inode、删除行为与相对路径坑"><img src="/img/p54.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ln 软硬链接实战：inode、删除行为与相对路径坑"/></a><div class="content"><a class="title" href="/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/" title="ln 软硬链接实战：inode、删除行为与相对路径坑">ln 软硬链接实战：inode、删除行为与相对路径坑</a><time datetime="2026-07-17T09:43:52.000Z" title="发表于 2026-07-17 17:43:52">2026-07-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/" title="crontab 定时任务实战：时间字段、环境变量坑与日志排查"><img src="/img/p53.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="crontab 定时任务实战：时间字段、环境变量坑与日志排查"/></a><div class="content"><a class="title" href="/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/" title="crontab 定时任务实战：时间字段、环境变量坑与日志排查">crontab 定时任务实战：时间字段、环境变量坑与日志排查</a><time datetime="2026-07-17T09:41:40.000Z" title="发表于 2026-07-17 17:41:40">2026-07-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/ss-lsof%E6%B7%B1%E5%85%A5-TCP%E8%BF%9E%E6%8E%A5%E7%8A%B6%E6%80%81%E4%B8%8E%E5%B7%B2%E5%88%A0%E9%99%A4%E6%96%87%E4%BB%B6%E5%8D%A0%E7%A3%81%E7%9B%98/" title="ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件"><img src="/img/p52.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件"/></a><div class="content"><a class="title" href="/ss-lsof%E6%B7%B1%E5%85%A5-TCP%E8%BF%9E%E6%8E%A5%E7%8A%B6%E6%80%81%E4%B8%8E%E5%B7%B2%E5%88%A0%E9%99%A4%E6%96%87%E4%BB%B6%E5%8D%A0%E7%A3%81%E7%9B%98/" title="ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件">ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件</a><time datetime="2026-07-17T09:39:34.000Z" title="发表于 2026-07-17 17:39:34">2026-07-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/SSH%E5%85%8D%E5%AF%86%E7%99%BB%E5%BD%95%E4%B8%8Escp%E5%AE%9E%E6%88%98-%E5%AF%86%E9%92%A5%E9%85%8D%E7%BD%AE%E4%B8%8E%E4%BC%A0%E6%96%87%E4%BB%B6/" title="SSH 免密登录与 scp 实战：密钥、config 别名与传文件"><img src="/img/p51.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="SSH 免密登录与 scp 实战：密钥、config 别名与传文件"/></a><div class="content"><a class="title" href="/SSH%E5%85%8D%E5%AF%86%E7%99%BB%E5%BD%95%E4%B8%8Escp%E5%AE%9E%E6%88%98-%E5%AF%86%E9%92%A5%E9%85%8D%E7%BD%AE%E4%B8%8E%E4%BC%A0%E6%96%87%E4%BB%B6/" title="SSH 免密登录与 scp 实战：密钥、config 别名与传文件">SSH 免密登录与 scp 实战：密钥、config 别名与传文件</a><time datetime="2026-07-14T12:48:27.000Z" title="发表于 2026-07-14 20:48:27">2026-07-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/systemctl-journalctl%E5%AE%9E%E6%88%98-%E6%9C%8D%E5%8A%A1%E7%AE%A1%E7%90%86%E4%B8%8E%E6%97%A5%E5%BF%97%E8%BF%87%E6%BB%A4/" title="systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤"><img src="/img/p50.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤"/></a><div class="content"><a class="title" href="/systemctl-journalctl%E5%AE%9E%E6%88%98-%E6%9C%8D%E5%8A%A1%E7%AE%A1%E7%90%86%E4%B8%8E%E6%97%A5%E5%BF%97%E8%BF%87%E6%BB%A4/" title="systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤">systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤</a><time datetime="2026-07-14T12:46:22.000Z" title="发表于 2026-07-14 20:46:22">2026-07-14</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script>function injectCategoryDesc(){var el=document.querySelector('.category-lists');if(!el||el.nextElementSibling&&el.nextElementSibling.id==='cat-desc')return;var desc=document.createElement('div');desc.id='cat-desc';desc.style.cssText='margin-top:28px;padding:20px 24px;background:rgba(255,255,255,0.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.45);border-radius:14px;';desc.innerHTML='<h3 style="margin:0 0 14px;font-size:.95rem;font-weight:700;color:#3b3b5c;">各分类说明</h3><table style="width:100%;border-collapse:collapse;font-size:.875rem;"><tbody><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">tools</td><td style="padding:8px 12px;color:#5a5a7a;">工具链系列，覆盖终端、Shell、搜索、文件管理、Git TUI、编辑器等；也包含 tldr、git tag 等命令速查</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">golang</td><td style="padding:8px 12px;color:#5a5a7a;">Go 后端实战：常见业务问题解决方案实现</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">git</td><td style="padding:8px 12px;color:#5a5a7a;">Git 常见使用方式以及操作技巧</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">ai</td><td style="padding:8px 12px;color:#5a5a7a;"> ai 相关使用和分享</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">cursor</td><td style="padding:8px 12px;color:#5a5a7a;">Cursor 编辑器：使用场景和难点</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">Hexo</td><td style="padding:8px 12px;color:#5a5a7a;">hexo 搭建博客的常见配置技巧</td></tr><tr><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">problem</td><td style="padding:8px 12px;color:#5a5a7a;">记录各种问题报错的排查过程</td></tr></tbody></table>';el.after(desc);}document.addEventListener('DOMContentLoaded',injectCategoryDesc);document.addEventListener('pjax:complete',injectCategoryDesc);</script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>

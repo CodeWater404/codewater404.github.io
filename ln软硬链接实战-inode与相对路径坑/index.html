@@ -1,0 +1,561 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>ln 软硬链接实战：inode、删除行为与相对路径坑 | Code Water</title><meta name="author" content="Code Water"><meta name="copyright" content="Code Water"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="ln 硬链接和软链接差在哪：inode 原理、删除行为的区别、软链接相对路径的坑一篇讲清。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ln 软硬链接实战：inode、删除行为与相对路径坑">
+<meta property="og:url" content="https://blog.codewater.top/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/index.html">
+<meta property="og:site_name" content="Code Water">
+<meta property="og:description" content="ln 硬链接和软链接差在哪：inode 原理、删除行为的区别、软链接相对路径的坑一篇讲清。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.codewater.top/img/p54.jpg">
+<meta property="article:published_time" content="2026-07-17T09:43:52.000Z">
+<meta property="article:modified_time" content="2026-07-17T09:43:52.000Z">
+<meta property="article:author" content="Code Water">
+<meta property="article:tag" content="CLI">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="命令行">
+<meta property="article:tag" content="文件系统">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.codewater.top/img/p54.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "ln 软硬链接实战：inode、删除行为与相对路径坑",
+  "url": "https://blog.codewater.top/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/",
+  "image": "https://blog.codewater.top/img/p54.jpg",
+  "datePublished": "2026-07-17T09:43:52.000Z",
+  "dateModified": "2026-07-17T09:43:52.000Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Code Water",
+      "url": "https://blog.codewater.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://blog.codewater.top/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'ln 软硬链接实战：inode、删除行为与相对路径坑',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>#footer{background:url('/img/banner.jpg') center bottom / cover no-repeat !important;background-color:transparent !important;}#footer::before{background:rgba(0,0,0,0.4) !important;}#recent-posts .recent-post-item .post-bg{transition:transform 0.5s ease !important;}#recent-posts .recent-post-item:hover .post-bg{transform:scale(1.05) !important;}#site-info h1#site-title{font-size:0 !important;}#site-info h1#site-title::after{content:"阿水的代码笔记";font-size:2.5rem;color:#fff;letter-spacing:.05em;font-weight:700;}</style><style>.category-lists{background:linear-gradient(135deg,#667eea55,#f5576c44,#4facfe44,#43e97b44);border-radius:20px;padding:28px !important;position:relative;overflow:hidden}.category-lists::before{content:'';position:absolute;top:-80px;left:-80px;width:240px;height:240px;background:radial-gradient(circle,#a78bfa88,transparent 70%);border-radius:50%;pointer-events:none}.category-lists::after{content:'';position:absolute;bottom:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,#f9a8d488,transparent 70%);border-radius:50%;pointer-events:none}.category-lists .category-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;padding:0 !important;list-style:none !important;margin:0 !important;position:relative;z-index:1}.category-lists .category-list>li.category-list-item{background:rgba(255,255,255,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.55);border-radius:14px;padding:22px 20px 18px;margin:0 !important;box-shadow:0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.7);transition:transform .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}.category-lists .category-list>li.category-list-item::before{display:none !important}.category-lists .category-list>li.category-list-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.7)}.category-lists .category-list-link{font-size:1rem;font-weight:700;color:#3b3b5c !important;display:block;margin-bottom:10px;line-height:1.3}.category-lists .category-list-count{display:inline-block;font-size:.78rem;font-weight:600;color:#5a5a7a !important;background:rgba(255,255,255,0.5);padding:2px 10px;border-radius:20px;margin-left:0 !important;border:1px solid rgba(255,255,255,0.7)}.category-lists .category-list-count::before,.category-lists .category-list-count::after{content:'' !important}.category-lists .category-list-child{margin-top:10px;padding:10px 0 0 0 !important;border-top:1px solid rgba(255,255,255,0.4) !important;list-style:none !important}.category-lists .category-list-child li.category-list-item{margin:5px 0 !important;padding:0 !important}.category-lists .category-list-child li.category-list-item::before{display:none !important}.category-lists .category-list-child .category-list-link{font-size:.82rem;font-weight:400;color:#5a5a7a !important;margin-bottom:0}.category-lists .category-list-child .category-list-count{font-size:.7rem;padding:1px 7px}[data-theme=dark] .category-lists .category-list>li.category-list-item{background:rgba(30,30,50,0.45);border-color:rgba(255,255,255,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.1)}[data-theme=dark] .category-lists .category-list-link{color:#e2e2f0 !important}[data-theme=dark] .category-lists .category-list-count{color:#a0a0c0 !important;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}[data-theme=dark] .category-lists .category-list-child .category-list-link{color:#a0a0c0 !important}</style><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Code Water" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">55</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">87</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/p54.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Code Water</span></a><a class="nav-page-title" href="/"><span class="site-name">ln 软硬链接实战：inode、删除行为与相对路径坑</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/resources/"><i class="fa-fw fas fa-download"></i><span> 资源</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">ln 软硬链接实战：inode、删除行为与相对路径坑</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-17T09:43:52.000Z" title="发表于 2026-07-17 17:43:52">2026-07-17</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-17T09:43:52.000Z" title="更新于 2026-07-17 17:43:52">2026-07-17</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/tools/">tools</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">1.6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p><code>ln -s</code> 建的软链接，挪个位置就失效；硬链接和软链接的区别，问十个人有八个说不清。这两个问题的根源是同一个概念——inode。把它理解了，<code>ln</code> 的所有行为都变得顺理成章。</p>
+<span id="more"></span>
+
+<p>这是 Linux 命令系列的一篇，承接 <a href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE">Linux 常见命令与工具地图</a>。<code>ln</code>（link）用来给文件创建链接——同一份内容的另一个访问入口，分硬链接和软链接（符号链接）两种，行为差别很大。</p>
+<h2 id="inode：文件名和文件内容是分开存的"><a href="#inode：文件名和文件内容是分开存的" class="headerlink" title="inode：文件名和文件内容是分开存的"></a>inode：文件名和文件内容是分开存的</h2><p>文件系统里，一个文件其实是两部分：<strong>inode</strong> 存文件的实际内容和元数据（大小、权限、时间戳），<strong>目录里的文件名</strong>只是一个指向 inode 的入口。名字和内容是分离的——这就是理解链接的全部前提。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ls</span> -i a.txt</span><br><span class="line"><span class="comment">#     -i：显示文件的 inode 编号</span></span><br><span class="line"><span class="comment">#     83502402 a.txt</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">ls</span> -l a.txt</span><br><span class="line"><span class="comment">#     -rw-r--r--  2 baizhe staff 6 ...</span></span><br><span class="line"><span class="comment">#     第二列的数字就是&quot;链接数&quot;——有多少个名字指向这个 inode</span></span><br><span class="line"><span class="comment">#     ls/stat 那篇文章里没展开的这一列，谜底在这</span></span><br></pre></td></tr></table></figure>
+
+<p><a href="/ls-stat-du-df%E6%96%87%E4%BB%B6%E4%BF%A1%E6%81%AF%E4%B8%8E%E7%A3%81%E7%9B%98%E5%8D%A0%E7%94%A8%E5%AE%9E%E6%88%98">stat 那篇</a> 输出里的 Inode 字段、<code>ls -l</code> 的第二列，说的都是这套机制。</p>
+<h2 id="硬链接：同一个-inode-的多个名字"><a href="#硬链接：同一个-inode-的多个名字" class="headerlink" title="硬链接：同一个 inode 的多个名字"></a>硬链接：同一个 inode 的多个名字</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ln</span> a.txt b.txt</span><br><span class="line"><span class="comment">#     语法：ln 已有文件 新链接名——目标在前，链接名在后</span></span><br><span class="line"><span class="comment">#     b.txt 是指向同一个 inode 的另一个名字，不是拷贝</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">ls</span> -li a.txt b.txt</span><br><span class="line"><span class="comment">#     83502402 -rw-r--r--  2 ... a.txt</span></span><br><span class="line"><span class="comment">#     83502402 -rw-r--r--  2 ... b.txt</span></span><br><span class="line"><span class="comment">#     inode 编号完全相同，链接数都变成了 2——两个名字，一份内容</span></span><br></pre></td></tr></table></figure>
+
+<p>因为两个名字完全平等地指向同一份内容，”删除”的语义也变了：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> a.txt</span><br><span class="line"><span class="built_in">cat</span> b.txt</span><br><span class="line"><span class="comment">#     输出 hello——内容还在！</span></span><br><span class="line"><span class="comment">#     rm 删的从来不是文件内容，只是目录里的一个名字（链接数减 1）</span></span><br><span class="line"><span class="comment">#     链接数归零、且没有进程持有句柄时，内容才真正被释放</span></span><br></pre></td></tr></table></figure>
+
+<p>这和 <a href="/ss-lsof%E6%B7%B1%E5%85%A5-TCP%E8%BF%9E%E6%8E%A5%E7%8A%B6%E6%80%81%E4%B8%8E%E5%B7%B2%E5%88%A0%E9%99%A4%E6%96%87%E4%BB%B6%E5%8D%A0%E7%A3%81%E7%9B%98">lsof 那篇</a> 讲的”rm 掉的文件还占着磁盘”是同一个原理——名字没了不等于内容没了。</p>
+<p>硬链接有两个硬性限制：<strong>不能跨文件系统</strong>（inode 编号只在单个文件系统内有意义，另一块盘上无从指起），<strong>不能对目录建</strong>（会造成目录树成环）。要跨盘、要链目录，就得用软链接。</p>
+<h2 id="软链接：存着路径的独立小文件"><a href="#软链接：存着路径的独立小文件" class="headerlink" title="软链接：存着路径的独立小文件"></a>软链接：存着路径的独立小文件</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ln</span> -s a.txt link.txt</span><br><span class="line"><span class="comment">#     -s：symbolic，创建软链接（符号链接）</span></span><br><span class="line"><span class="comment">#     link.txt 是一个独立的小文件，有自己的 inode，内容就是一串路径字符串</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">ls</span> -l link.txt</span><br><span class="line"><span class="comment">#     lrwxr-xr-x ... link.txt -&gt; a.txt</span></span><br><span class="line"><span class="comment">#     权限位开头的 l 表示这是软链接，-&gt; 显示它指向哪里</span></span><br></pre></td></tr></table></figure>
+
+<p>软链接本质是”存着一个路径的文件”，访问它时系统顺着路径再找真正的目标。所以它没有硬链接的限制——可以跨文件系统、可以指向目录——代价是多了一层间接：目标没了，链接就悬空了：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> a.txt</span><br><span class="line"><span class="built_in">cat</span> link.txt</span><br><span class="line"><span class="comment">#     No such file or directory——目标被删，软链接变成&quot;悬空链接&quot;（dangling）</span></span><br><span class="line"><span class="comment">#     链接文件本身还在，只是指过去扑了个空；硬链接不存在这个问题</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="软链接最大的坑：相对路径"><a href="#软链接最大的坑：相对路径" class="headerlink" title="软链接最大的坑：相对路径"></a>软链接最大的坑：相对路径</h2><p>软链接里存的路径如果是相对的，<strong>它相对的是”链接所在的目录”，不是你执行 ln 命令时所在的目录</strong>。这是软链接失效的头号原因：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 当前目录下有 original.txt，想在子目录 sub/ 里建个链接指向它：</span></span><br><span class="line"><span class="built_in">ln</span> -s original.txt sub/link2.txt</span><br><span class="line"><span class="comment">#     直觉上没问题——original.txt 就在当前目录啊</span></span><br><span class="line"><span class="comment">#     实际上悬空了：链接存的字符串是 &quot;original.txt&quot;，</span></span><br><span class="line"><span class="comment">#     解析时相对的是链接所在的 sub/ 目录，即 sub/original.txt——不存在</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">cat</span> sub/link2.txt</span><br><span class="line"><span class="comment">#     No such file or directory</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">readlink</span> sub/link2.txt</span><br><span class="line"><span class="comment">#     输出 original.txt——readlink 显示链接里存的原始路径，验证问题的最快方法</span></span><br></pre></td></tr></table></figure>
+
+<p>两种正确写法：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ln</span> -s /full/path/to/original.txt sub/link2.txt</span><br><span class="line"><span class="comment">#     解法一：目标写绝对路径，链接放哪都不会歪——脚本里建链接推荐这种</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">ln</span> -s ../original.txt sub/link2.txt</span><br><span class="line"><span class="comment">#     解法二：按&quot;从链接所在目录出发&quot;来写相对路径</span></span><br><span class="line"><span class="comment">#     相对路径的好处是整个目录树挪走后链接关系依然成立</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="软链接的两个典型场景"><a href="#软链接的两个典型场景" class="headerlink" title="软链接的两个典型场景"></a>软链接的两个典型场景</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ln</span> -s /opt/app/releases/v2.3.1 /opt/app/current</span><br><span class="line"><span class="comment">#     版本切换：程序永远访问 current，发新版只需要把链接指向新目录</span></span><br><span class="line"><span class="comment">#     切换是原子的、回滚只要把链接指回去——大量部署工具的标准做法</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">mv</span> /var/lib/docker /data/docker &amp;&amp; <span class="built_in">ln</span> -s /data/docker /var/lib/docker</span><br><span class="line"><span class="comment">#     腾磁盘空间：把占地大的目录挪到空间充裕的盘，原位置留个软链接</span></span><br><span class="line"><span class="comment">#     应用无感知，路径照旧能访问</span></span><br></pre></td></tr></table></figure>
+
+<p>硬链接的日常场景少一些，最常见的是备份工具的增量快照——同一份没变过的文件在多个快照目录里用硬链接共享，几十份”全量备份”实际只占一份多的空间。</p>
+<h2 id="常用操作速查表"><a href="#常用操作速查表" class="headerlink" title="常用操作速查表"></a>常用操作速查表</h2><table>
+<thead>
+<tr>
+<th>命令&#x2F;概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ln 目标 链接名</code></td>
+<td>硬链接：同 inode 的另一个名字，语法目标在前</td>
+</tr>
+<tr>
+<td><code>ln -s 目标 链接名</code></td>
+<td>软链接：存路径的独立文件，可跨盘、可链目录</td>
+</tr>
+<tr>
+<td><code>ls -i</code> &#x2F; <code>ls -l</code> 第二列</td>
+<td>查看 inode 编号 &#x2F; 指向该 inode 的链接数</td>
+</tr>
+<tr>
+<td>硬链接删除行为</td>
+<td>rm 只删名字，链接数归零内容才释放</td>
+</tr>
+<tr>
+<td>软链接删除行为</td>
+<td>删目标后链接悬空；删链接不影响目标</td>
+</tr>
+<tr>
+<td>硬链接限制</td>
+<td>不能跨文件系统、不能对目录</td>
+</tr>
+<tr>
+<td>软链接相对路径</td>
+<td>相对于链接所在目录解析，不是执行命令的目录</td>
+</tr>
+<tr>
+<td><code>readlink 链接</code></td>
+<td>查看链接里存的原始路径，排查悬空第一步</td>
+</tr>
+<tr>
+<td><code>ls -l</code> 开头的 <code>l</code></td>
+<td>权限位首字母 l 即软链接，<code>-&gt;</code> 显示指向</td>
+</tr>
+</tbody></table>
+<h2 id="写到这里"><a href="#写到这里" class="headerlink" title="写到这里"></a>写到这里</h2><p>一句话总结两种链接：硬链接是”同一个 inode 的多个平等名字”，软链接是”存着路径的独立小文件”。删除行为、跨盘限制、悬空问题，全都能从这两句话推出来。日常用得最多的是软链接的版本切换和目录搬迁，记住相对路径那个坑（相对于链接所在目录），基本就不会再踩雷了。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.codewater.top">Code Water</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.codewater.top/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/">https://blog.codewater.top/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.codewater.top" target="_blank">Code Water</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/CLI/">CLI</a><a class="post-meta__tags" href="/tags/Linux/">Linux</a><a class="post-meta__tags" href="/tags/%E5%91%BD%E4%BB%A4%E8%A1%8C/">命令行</a><a class="post-meta__tags" href="/tags/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/">文件系统</a></div><div class="post-share"><div class="social-share" data-image="/img/p54.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/" title="crontab 定时任务实战：时间字段、环境变量坑与日志排查"><img class="cover" src="/img/p53.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">crontab 定时任务实战：时间字段、环境变量坑与日志排查</div></div><div class="info-2"><div class="info-item-1">crontab 五个时间字段怎么写、-e/-l 常用操作、任务不执行九成是 PATH 问题：定时任务实战。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/ls-stat-du-df%E6%96%87%E4%BB%B6%E4%BF%A1%E6%81%AF%E4%B8%8E%E7%A3%81%E7%9B%98%E5%8D%A0%E7%94%A8%E5%AE%9E%E6%88%98/" title="ls、stat、du、df 实战：文件信息与磁盘占用怎么查"><img class="cover" src="/img/p46.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">ls、stat、du、df 实战：文件信息与磁盘占用怎么查</div></div><div class="info-2"><div class="info-item-1">ls/tree/file/stat 查文件信息，du/df 查磁盘占用：三个时间戳区别与磁盘满排查实战。</div></div></div></a><a class="pagination-related" href="/Linux%E5%91%BD%E4%BB%A4%E8%A1%8C%E9%80%89%E9%A1%B9%E8%AE%BE%E8%AE%A1%E7%BA%A6%E5%AE%9A/" title="Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定"><img class="cover" src="/img/p35.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">Linux 命令行选项设计：-v 和 --verbose 的区别，以及谁在决定这些约定</div></div><div class="info-2"><div class="info-item-1">短选项和长选项是什么关系、为什么 grep -v 和 node -v 意思完全不同、-- 怎么用，讲清楚 Linux 命令行选项背后没有强制标准的设计约定。</div></div></div></a><a class="pagination-related" href="/Linux%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4%E4%B8%8E%E5%B7%A5%E5%85%B7%E5%9C%B0%E5%9B%BE/" title="Linux 常见命令与工具地图(备忘录)"><img class="cover" src="/img/p30.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-09</div><div class="info-item-2">Linux 常见命令与工具地图(备忘录)</div></div><div class="info-2"><div class="info-item-1">按场景分类的 Linux 命令速查地图：文件、文本处理、进程、网络、权限、包管理、压缩传输、Git，每条一句话说明用途，配合详细文章深入用法。</div></div></div></a><a class="pagination-related" href="/kill%E4%BF%A1%E5%8F%B7%E6%9C%BA%E5%88%B6%E4%B8%8Enice%E4%BC%98%E5%85%88%E7%BA%A7%E5%AE%9E%E6%88%98/" title="kill 默认不是&quot;杀死&quot;：进程信号与 nice 优先级实战"><img class="cover" src="/img/p47.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">kill 默认不是&quot;杀死&quot;：进程信号与 nice 优先级实战</div></div><div class="info-2"><div class="info-item-1">kill 默认发的不是杀死信号：SIGTERM/SIGKILL/SIGHUP 区别、pkill 按名杀进程与 nice 优先级。</div></div></div></a><a class="pagination-related" href="/curl%E4%B8%8Ewget%E5%AE%9E%E6%88%98-%E8%B0%83%E6%8E%A5%E5%8F%A3%E4%B8%8B%E8%BD%BD%E4%B8%8E%E6%96%AD%E7%82%B9%E7%BB%AD%E4%BC%A0/" title="curl 与 wget 实战：调接口、下载文件与断点续传"><img class="cover" src="/img/p48.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">curl 与 wget 实战：调接口、下载文件与断点续传</div></div><div class="info-2"><div class="info-item-1">curl 调接口、wget 下载：-I/-L/-d 常用参数、断点续传与两个工具怎么分工。</div></div></div></a><a class="pagination-related" href="/cut-sort-uniq-wc-jq%E6%96%87%E6%9C%AC%E5%B0%8F%E5%B7%A5%E5%85%B7%E7%BB%84%E5%90%88%E6%8B%B3%E5%AE%9E%E6%88%98/" title="cut、sort、uniq、wc、jq 实战：小工具组合怎么顶一个 awk 脚本"><img class="cover" src="/img/p45.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">cut、sort、uniq、wc、jq 实战：小工具组合怎么顶一个 awk 脚本</div></div><div class="info-2"><div class="info-item-1">cut 截取列、sort 排序、uniq 去重计数、wc 统计、jq 处理 JSON，组合替代 awk 脚本。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Code Water</div><div class="author-info-description">Talk is cheap, show me the code!</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">55</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">87</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/CodeWater404"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/CodeWater404" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="https://t.me/dylancody" target="_blank" title="Telegram"><i class="fab fa-telegram"></i></a><a class="social-icon" href="mailto:dylanrieder@163.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#inode%EF%BC%9A%E6%96%87%E4%BB%B6%E5%90%8D%E5%92%8C%E6%96%87%E4%BB%B6%E5%86%85%E5%AE%B9%E6%98%AF%E5%88%86%E5%BC%80%E5%AD%98%E7%9A%84"><span class="toc-number">1.</span> <span class="toc-text">inode：文件名和文件内容是分开存的</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%A1%AC%E9%93%BE%E6%8E%A5%EF%BC%9A%E5%90%8C%E4%B8%80%E4%B8%AA-inode-%E7%9A%84%E5%A4%9A%E4%B8%AA%E5%90%8D%E5%AD%97"><span class="toc-number">2.</span> <span class="toc-text">硬链接：同一个 inode 的多个名字</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BD%AF%E9%93%BE%E6%8E%A5%EF%BC%9A%E5%AD%98%E7%9D%80%E8%B7%AF%E5%BE%84%E7%9A%84%E7%8B%AC%E7%AB%8B%E5%B0%8F%E6%96%87%E4%BB%B6"><span class="toc-number">3.</span> <span class="toc-text">软链接：存着路径的独立小文件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BD%AF%E9%93%BE%E6%8E%A5%E6%9C%80%E5%A4%A7%E7%9A%84%E5%9D%91%EF%BC%9A%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84"><span class="toc-number">4.</span> <span class="toc-text">软链接最大的坑：相对路径</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BD%AF%E9%93%BE%E6%8E%A5%E7%9A%84%E4%B8%A4%E4%B8%AA%E5%85%B8%E5%9E%8B%E5%9C%BA%E6%99%AF"><span class="toc-number">5.</span> <span class="toc-text">软链接的两个典型场景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">6.</span> <span class="toc-text">常用操作速查表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%88%B0%E8%BF%99%E9%87%8C"><span class="toc-number">7.</span> <span class="toc-text">写到这里</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/" title="ln 软硬链接实战：inode、删除行为与相对路径坑"><img src="/img/p54.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ln 软硬链接实战：inode、删除行为与相对路径坑"/></a><div class="content"><a class="title" href="/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/" title="ln 软硬链接实战：inode、删除行为与相对路径坑">ln 软硬链接实战：inode、删除行为与相对路径坑</a><time datetime="2026-07-17T09:43:52.000Z" title="发表于 2026-07-17 17:43:52">2026-07-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/" title="crontab 定时任务实战：时间字段、环境变量坑与日志排查"><img src="/img/p53.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="crontab 定时任务实战：时间字段、环境变量坑与日志排查"/></a><div class="content"><a class="title" href="/crontab%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E5%AE%9E%E6%88%98-%E6%97%B6%E9%97%B4%E5%AD%97%E6%AE%B5%E4%B8%8E%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%9D%91/" title="crontab 定时任务实战：时间字段、环境变量坑与日志排查">crontab 定时任务实战：时间字段、环境变量坑与日志排查</a><time datetime="2026-07-17T09:41:40.000Z" title="发表于 2026-07-17 17:41:40">2026-07-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/ss-lsof%E6%B7%B1%E5%85%A5-TCP%E8%BF%9E%E6%8E%A5%E7%8A%B6%E6%80%81%E4%B8%8E%E5%B7%B2%E5%88%A0%E9%99%A4%E6%96%87%E4%BB%B6%E5%8D%A0%E7%A3%81%E7%9B%98/" title="ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件"><img src="/img/p52.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件"/></a><div class="content"><a class="title" href="/ss-lsof%E6%B7%B1%E5%85%A5-TCP%E8%BF%9E%E6%8E%A5%E7%8A%B6%E6%80%81%E4%B8%8E%E5%B7%B2%E5%88%A0%E9%99%A4%E6%96%87%E4%BB%B6%E5%8D%A0%E7%A3%81%E7%9B%98/" title="ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件">ss 与 lsof 深入：TIME_WAIT、CLOSE_WAIT 与已删除还占磁盘的文件</a><time datetime="2026-07-17T09:39:34.000Z" title="发表于 2026-07-17 17:39:34">2026-07-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/SSH%E5%85%8D%E5%AF%86%E7%99%BB%E5%BD%95%E4%B8%8Escp%E5%AE%9E%E6%88%98-%E5%AF%86%E9%92%A5%E9%85%8D%E7%BD%AE%E4%B8%8E%E4%BC%A0%E6%96%87%E4%BB%B6/" title="SSH 免密登录与 scp 实战：密钥、config 别名与传文件"><img src="/img/p51.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="SSH 免密登录与 scp 实战：密钥、config 别名与传文件"/></a><div class="content"><a class="title" href="/SSH%E5%85%8D%E5%AF%86%E7%99%BB%E5%BD%95%E4%B8%8Escp%E5%AE%9E%E6%88%98-%E5%AF%86%E9%92%A5%E9%85%8D%E7%BD%AE%E4%B8%8E%E4%BC%A0%E6%96%87%E4%BB%B6/" title="SSH 免密登录与 scp 实战：密钥、config 别名与传文件">SSH 免密登录与 scp 实战：密钥、config 别名与传文件</a><time datetime="2026-07-14T12:48:27.000Z" title="发表于 2026-07-14 20:48:27">2026-07-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/systemctl-journalctl%E5%AE%9E%E6%88%98-%E6%9C%8D%E5%8A%A1%E7%AE%A1%E7%90%86%E4%B8%8E%E6%97%A5%E5%BF%97%E8%BF%87%E6%BB%A4/" title="systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤"><img src="/img/p50.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤"/></a><div class="content"><a class="title" href="/systemctl-journalctl%E5%AE%9E%E6%88%98-%E6%9C%8D%E5%8A%A1%E7%AE%A1%E7%90%86%E4%B8%8E%E6%97%A5%E5%BF%97%E8%BF%87%E6%BB%A4/" title="systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤">systemctl 与 journalctl 实战：enable 和 start 的区别、unit 文件与日志过滤</a><time datetime="2026-07-14T12:46:22.000Z" title="发表于 2026-07-14 20:46:22">2026-07-14</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Code Water</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.5"></script><script src="/js/main.js?v=5.5.5"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script>function injectCategoryDesc(){var el=document.querySelector('.category-lists');if(!el||el.nextElementSibling&&el.nextElementSibling.id==='cat-desc')return;var desc=document.createElement('div');desc.id='cat-desc';desc.style.cssText='margin-top:28px;padding:20px 24px;background:rgba(255,255,255,0.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.45);border-radius:14px;';desc.innerHTML='<h3 style="margin:0 0 14px;font-size:.95rem;font-weight:700;color:#3b3b5c;">各分类说明</h3><table style="width:100%;border-collapse:collapse;font-size:.875rem;"><tbody><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">tools</td><td style="padding:8px 12px;color:#5a5a7a;">工具链系列，覆盖终端、Shell、搜索、文件管理、Git TUI、编辑器等；也包含 tldr、git tag 等命令速查</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">golang</td><td style="padding:8px 12px;color:#5a5a7a;">Go 后端实战：常见业务问题解决方案实现</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">git</td><td style="padding:8px 12px;color:#5a5a7a;">Git 常见使用方式以及操作技巧</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">ai</td><td style="padding:8px 12px;color:#5a5a7a;"> ai 相关使用和分享</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">cursor</td><td style="padding:8px 12px;color:#5a5a7a;">Cursor 编辑器：使用场景和难点</td></tr><tr style="border-bottom:1px solid rgba(0,0,0,0.06)"><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">Hexo</td><td style="padding:8px 12px;color:#5a5a7a;">hexo 搭建博客的常见配置技巧</td></tr><tr><td style="padding:8px 12px;font-weight:600;white-space:nowrap;color:#3b3b5c;">problem</td><td style="padding:8px 12px;color:#5a5a7a;">记录各种问题报错的排查过程</td></tr></tbody></table>';el.after(desc);}document.addEventListener('DOMContentLoaded',injectCategoryDesc);document.addEventListener('pjax:complete',injectCategoryDesc);</script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-ribbon.min.js" size="150" alpha="0.8" zIndex="-1" mobile="true" data-click="true"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,149,255" opacity="0.8" zIndex="-1" count="150" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.5"></script></div></div></body></html>
