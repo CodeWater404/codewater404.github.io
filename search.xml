@@ -4,6 +4,37 @@
   
     
     <entry>
+      <title>Docker 教程：从镜像容器概念到 Dockerfile 与 compose 实战</title>
+      <link href="/Docker%E6%95%99%E7%A8%8B-%E9%95%9C%E5%83%8F%E5%AE%B9%E5%99%A8%E6%A6%82%E5%BF%B5%E5%88%B0Dockerfile%E4%B8%8Ecompose%E5%AE%9E%E6%88%98/"/>
+      <url>/Docker%E6%95%99%E7%A8%8B-%E9%95%9C%E5%83%8F%E5%AE%B9%E5%99%A8%E6%A6%82%E5%BF%B5%E5%88%B0Dockerfile%E4%B8%8Ecompose%E5%AE%9E%E6%88%98/</url>
+      
+        <content type="html"><![CDATA[<p>“我这儿能跑啊”——部署最老的敌人就是环境差异：你机器上有的依赖、库版本、系统配置，服务器上不一定有。Docker 的解法是把程序连同它的整个运行环境（系统库、依赖、配置）打包成一个可移植的”盒子”，在哪台机器上跑，环境都一模一样。</p><span id="more"></span><h2 id="Docker-是什么：三个核心概念"><a href="#Docker-是什么：三个核心概念" class="headerlink" title="Docker 是什么：三个核心概念"></a><a href="https://docs.docker.com/">Docker</a> 是什么：三个核心概念</h2><p>Docker 是容器引擎——用比虚拟机轻得多的方式隔离和运行程序。上手前必须分清三个概念，绝大多数新手困惑都源于把前两个混为一谈：</p><ul><li><strong>镜像（image）</strong>：只读的模板，包含程序和它的完整运行环境——类比面向对象里的”类”</li><li><strong>容器（container）</strong>：镜像跑起来的实例——类比”对象”，同一个镜像可以同时跑出多个互不干扰的容器</li><li><strong>仓库（registry）</strong>：集中存放镜像的服务，默认是 Docker Hub，<code>docker pull</code> 从这里拉镜像</li></ul><pre><code class="highlight mermaid">flowchart LR    D[Dockerfile] --&gt;|docker build| I[镜像 image]    I --&gt;|docker run| C1[容器 1]    I --&gt;|docker run| C2[容器 2]    R[(仓库 registry)] --&gt;|docker pull| I    I --&gt;|docker push| R</code></pre><h2 id="安装：一条命令"><a href="#安装：一条命令" class="headerlink" title="安装：一条命令"></a>安装：一条命令</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">curl -fsSL https://get.docker.com | sh</span><br><span class="line"><span class="comment">#     Linux 上的官方便捷安装脚本——-sSL 这套管道安装的参数含义在 curl 那篇讲过</span></span><br><span class="line"><span class="comment">#     -f：HTTP 出错时直接失败，不把错误页当脚本喂给 sh</span></span><br><span class="line"></span><br><span class="line">docker run hello-world</span><br><span class="line"><span class="comment">#     装完跑这个验证：能输出欢迎信息说明引擎正常</span></span><br></pre></td></tr></table></figure><p>macOS&#x2F;Windows 用 <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> 图形化安装（macOS 上轻量替代 OrbStack 也很流行），装完命令行用法完全一致。</p><h2 id="docker-run：参数拆解"><a href="#docker-run：参数拆解" class="headerlink" title="docker run：参数拆解"></a>docker run：参数拆解</h2><p>跑一个 nginx，把最常用的参数一次讲清：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">docker run -d -p 8080:80 --name web nginx</span><br><span class="line"><span class="comment">#     nginx：镜像名，本地没有会自动去仓库拉取</span></span><br><span class="line"><span class="comment">#     -d：detached，后台运行，不占着当前终端</span></span><br><span class="line"><span class="comment">#     -p 8080:80：端口映射，方向是 宿主机:容器——</span></span><br><span class="line"><span class="comment">#         把宿主机的 8080 映射到容器里的 80，浏览器访问 localhost:8080 就到了容器里的 nginx</span></span><br><span class="line"><span class="comment">#         方向记反是最常见的新手错误：冒号左边永远是你机器上的端口</span></span><br><span class="line"><span class="comment">#     --name web：给容器起名，后续操作用名字代替随机生成的 ID</span></span><br></pre></td></tr></table></figure><h2 id="容器生命周期：从跑起来到删干净"><a href="#容器生命周期：从跑起来到删干净" class="headerlink" title="容器生命周期：从跑起来到删干净"></a>容器生命周期：从跑起来到删干净</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">docker ps</span><br><span class="line"><span class="comment">#     列出正在运行的容器</span></span><br><span class="line"></span><br><span class="line">docker ps -a</span><br><span class="line"><span class="comment">#     -a：包含已退出的容器——容器停了不等于没了，还占着名字和磁盘</span></span><br><span class="line"></span><br><span class="line">docker logs -f web</span><br><span class="line"><span class="comment">#     看容器的输出日志，-f 实时跟踪（和 tail -f 一个手感）</span></span><br><span class="line"></span><br><span class="line">docker <span class="built_in">exec</span> -it web sh</span><br><span class="line"><span class="comment">#     进入运行中的容器内部开个 shell，排查问题用</span></span><br><span class="line"><span class="comment">#     -i 保持输入、-t 分配终端，基本固定连用；exit 退出不影响容器运行</span></span><br><span class="line"></span><br><span class="line">docker stop web</span><br><span class="line"><span class="comment">#     停止容器（先发 SIGTERM 优雅退出，超时再强杀——和 systemctl stop 同款逻辑）</span></span><br><span class="line"></span><br><span class="line">docker <span class="built_in">rm</span> web</span><br><span class="line"><span class="comment">#     删除已停止的容器；运行中的要先 stop 或用 rm -f</span></span><br><span class="line"></span><br><span class="line">docker run --<span class="built_in">rm</span> -it golang:1.26 bash</span><br><span class="line"><span class="comment">#     --rm：容器退出后自动删除自己——临时起个环境试点东西，用完不留垃圾</span></span><br></pre></td></tr></table></figure><p>一个必须建立的认知：<strong>容器不是轻量虚拟机，它的生命周期跟着主进程走</strong>——<code>docker run</code> 启动时指定（或镜像默认）的那个进程退出了，容器就停了。跑个 <code>docker run ubuntu</code> 发现容器”秒退”，不是坏了，是它的默认命令执行完就结束了。</p><h2 id="数据坑：容器删了，数据跟着没了"><a href="#数据坑：容器删了，数据跟着没了" class="headerlink" title="数据坑：容器删了，数据跟着没了"></a>数据坑：容器删了，数据跟着没了</h2><p>容器内部写的文件属于容器自己的可写层，<code>docker rm</code> 之后整层蒸发。数据库这类有状态的服务，必须把数据目录挂载到宿主机：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">docker run -d --name pg \</span><br><span class="line">  -e POSTGRES_PASSWORD=devpass \</span><br><span class="line">  -v /data/pgdata:/var/lib/postgresql/data \</span><br><span class="line">  postgres:17</span><br><span class="line"><span class="comment">#     -e：设置容器内的环境变量，镜像文档会列出支持哪些</span></span><br><span class="line"><span class="comment">#     -v 宿主路径:容器路径：把宿主机目录挂进容器——</span></span><br><span class="line"><span class="comment">#         数据实际写在宿主机 /data/pgdata，容器删了重建，数据还在</span></span><br></pre></td></tr></table></figure><p>判断标准很简单：这个容器产生的数据丢了心不心疼？心疼就必须 <code>-v</code> 挂出来。</p><h2 id="镜像管理与-tag"><a href="#镜像管理与-tag" class="headerlink" title="镜像管理与 tag"></a>镜像管理与 tag</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">docker images</span><br><span class="line"><span class="comment">#     列出本地已有的镜像和它们的体积</span></span><br><span class="line"></span><br><span class="line">docker pull nginx:1.27</span><br><span class="line"><span class="comment">#     拉取指定版本，冒号后面是 tag（版本标签）</span></span><br><span class="line"></span><br><span class="line">docker rmi nginx:1.27</span><br><span class="line"><span class="comment">#     删除本地镜像，释放磁盘</span></span><br></pre></td></tr></table></figure><p>tag 有个约定俗成的坑：不写 tag 默认拉 <code>latest</code>，但 latest 只是个普通标签，指向的版本会随时间漂移——今天构建和明天构建拉到的可能不是同一个东西。<strong>生产环境永远写死具体版本号</strong>，<code>postgres:17</code> 而不是 <code>postgres:latest</code>。</p><h2 id="Dockerfile：把自己的-Go-服务打成镜像"><a href="#Dockerfile：把自己的-Go-服务打成镜像" class="headerlink" title="Dockerfile：把自己的 Go 服务打成镜像"></a>Dockerfile：把自己的 Go 服务打成镜像</h2><p>Dockerfile 是构建镜像的”配方”。Go 程序编译成单个静态二进制，特别适合多阶段构建——编译在带完整工具链的大镜像里做，运行只带二进制本身：</p><figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 阶段一：编译。golang 官方镜像自带完整编译工具链，体积几百 MB（Debian 底座的接近 1 GB），但只在构建时用</span></span><br><span class="line"><span class="keyword">FROM</span> golang:<span class="number">1.26</span>-alpine AS builder</span><br><span class="line"><span class="keyword">WORKDIR</span><span class="language-bash"> /app</span></span><br><span class="line"><span class="keyword">COPY</span><span class="language-bash"> go.mod go.sum ./</span></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> go mod download</span></span><br><span class="line"><span class="comment">#     先只拷贝依赖清单并下载依赖——这两层能吃缓存，</span></span><br><span class="line"><span class="comment">#     代码改动不会导致依赖重新下载，构建快很多</span></span><br><span class="line"><span class="keyword">COPY</span><span class="language-bash"> . .</span></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> CGO_ENABLED=0 go build -o server .</span></span><br><span class="line"><span class="comment">#     CGO_ENABLED=0：纯静态编译，产物不依赖任何系统库</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 阶段二：运行。只把二进制拷进一个几 MB 的空底座</span></span><br><span class="line"><span class="keyword">FROM</span> alpine:latest</span><br><span class="line"><span class="keyword">WORKDIR</span><span class="language-bash"> /app</span></span><br><span class="line"><span class="keyword">COPY</span><span class="language-bash"> --from=builder /app/server .</span></span><br><span class="line"><span class="comment">#     --from=builder：从上一阶段拷贝产物，工具链、源码统统不带</span></span><br><span class="line"><span class="keyword">EXPOSE</span> <span class="number">8080</span></span><br><span class="line"><span class="keyword">CMD</span><span class="language-bash"> [<span class="string">&quot;./server&quot;</span>]</span></span><br><span class="line"><span class="comment">#     CMD：容器启动时执行的命令——就是前面说的&quot;主进程&quot;</span></span><br></pre></td></tr></table></figure><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">docker build -t myapp:1.0 .</span><br><span class="line"><span class="comment">#     -t：给构建出的镜像打名字和 tag；最后的 . 是构建上下文（Dockerfile 所在目录）</span></span><br><span class="line"></span><br><span class="line">docker run -d -p 8080:8080 myapp:1.0</span><br></pre></td></tr></table></figure><p>多阶段构建的效果立竿见影：单阶段直接用 golang 镜像跑，成品接近 1 GB；两阶段下来通常只有十几 MB。</p><p>为什么差距这么大？关键在于<strong>镜像是一层层叠出来的，最终镜像 &#x3D; 基础镜像的所有层 + 你新加的层，叠上去的东西删不掉</strong>。单阶段构建时基础镜像是 golang——里面装着 Go 编译器、标准库、git、gcc 这一整套构建工具（Debian 底座解压后就有 800 MB 上下），再叠上 <code>go mod download</code> 拉下来的依赖缓存和你的源码，成品轻松逼近 1 GB。可服务跑起来真正需要的只有那个十几 MB 的静态二进制，剩下全是”编译完就没用了”的东西。多阶段构建的本质就是把这些甩掉：<code>FROM alpine</code> 另起一个只有几 MB 的干净底座，只把二进制 <code>COPY</code> 进去——builder 阶段的所有层都不会进入最终镜像。</p><h2 id="docker-compose：多容器一把梭"><a href="#docker-compose：多容器一把梭" class="headerlink" title="docker compose：多容器一把梭"></a>docker compose：多容器一把梭</h2><p>服务一多（web + 数据库 + 缓存），逐个 <code>docker run</code> 又长又难维护。compose 把整套服务声明在一个 <code>compose.yaml</code> 里：</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">web:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;8080:8080&quot;</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">REDIS_ADDR=redis:6379</span></span><br><span class="line">    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">redis</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">redis:7</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./redis-data:/data</span></span><br></pre></td></tr></table></figure><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">docker compose up -d</span><br><span class="line"><span class="comment">#     一条命令把整套服务按依赖顺序拉起来</span></span><br><span class="line"><span class="comment">#     注意是 docker compose（空格）——v2 的写法，作为插件内置在现代 Docker 里</span></span><br><span class="line"><span class="comment">#     老文章里的 docker-compose（连字符）是 v1 独立程序，2023 年就停止更新了</span></span><br><span class="line"></span><br><span class="line">docker compose logs -f</span><br><span class="line"><span class="comment">#     聚合看所有服务的日志</span></span><br><span class="line"></span><br><span class="line">docker compose down</span><br><span class="line"><span class="comment">#     整套停掉并删除容器（挂载出来的数据不受影响）</span></span><br></pre></td></tr></table></figure><p>compose 文件里服务名（如 <code>redis</code>）自动成为容器间互相访问的主机名——<code>web</code> 里连 <code>redis:6379</code> 就通，不用关心容器 IP。</p><h2 id="排查与查看：network、inspect-与-docker-info"><a href="#排查与查看：network、inspect-与-docker-info" class="headerlink" title="排查与查看：network、inspect 与 docker info"></a>排查与查看：network、inspect 与 docker info</h2><p>容器出问题时光看 logs 不够，还得能看它的网络接在哪、完整配置是什么、引擎本身的状态如何。这几个都是只读的查看类命令，放心随便敲：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">docker network <span class="built_in">ls</span></span><br><span class="line"><span class="comment">#     列出 Docker 的网络。默认有三个：bridge（容器不指定网络就接它）、host、none</span></span><br><span class="line"></span><br><span class="line">docker network inspect bridge</span><br><span class="line"><span class="comment">#     看某个网络的详情：网段、网关、接在这个网络上的容器和它们各自的 IP</span></span><br><span class="line"></span><br><span class="line">docker inspect web</span><br><span class="line"><span class="comment">#     输出容器的完整配置 JSON：环境变量、挂载、端口映射、IP、重启策略全在里面</span></span><br><span class="line"><span class="comment">#     镜像同样能 inspect：docker inspect nginx:1.27</span></span><br><span class="line"></span><br><span class="line">docker inspect -f <span class="string">&#x27;&#123;&#123;.NetworkSettings.IPAddress&#125;&#125;&#x27;</span> web</span><br><span class="line"><span class="comment">#     -f：format，用 Go 模板语法只取想要的字段——这个例子直接输出容器的 IP</span></span><br><span class="line"></span><br><span class="line">docker port web</span><br><span class="line"><span class="comment">#     只看这个容器的端口映射，比在 inspect 的大 JSON 里翻快得多</span></span><br><span class="line"></span><br><span class="line">docker info</span><br><span class="line"><span class="comment">#     Docker 引擎自身的配置和状态：存储驱动、数据根目录、容器/镜像数量、cgroup 版本</span></span><br><span class="line"></span><br><span class="line">docker stats</span><br><span class="line"><span class="comment">#     实时看各容器的 CPU、内存、网络占用——容器版的 top</span></span><br><span class="line"></span><br><span class="line">docker system <span class="built_in">df</span></span><br><span class="line"><span class="comment">#     镜像、容器、数据卷各占了多少磁盘，清理前先看这个</span></span><br></pre></td></tr></table></figure><h2 id="常用命令速查表"><a href="#常用命令速查表" class="headerlink" title="常用命令速查表"></a>常用命令速查表</h2><table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>docker run -d 镜像</code></td><td>后台启动容器</td></tr><tr><td><code>docker run -p 宿主:容器</code></td><td>端口映射，冒号左边是宿主机</td></tr><tr><td><code>docker run -v 宿主:容器</code></td><td>目录挂载，有状态数据必挂</td></tr><tr><td><code>docker run -e KEY=VAL</code></td><td>设置容器内环境变量</td></tr><tr><td><code>docker run --name 名字</code></td><td>给容器命名</td></tr><tr><td><code>docker run --rm</code></td><td>退出后自动删除，临时容器用</td></tr><tr><td><code>docker run -it 镜像 sh</code></td><td>交互式进入容器 shell</td></tr><tr><td><code>docker ps</code> &#x2F; <code>ps -a</code></td><td>运行中的容器 &#x2F; 含已退出的</td></tr><tr><td><code>docker logs -f 容器</code></td><td>实时跟踪容器日志</td></tr><tr><td><code>docker exec -it 容器 sh</code></td><td>进入运行中的容器</td></tr><tr><td><code>docker stop</code> &#x2F; <code>rm</code></td><td>停止 &#x2F; 删除容器</td></tr><tr><td><code>docker images</code></td><td>本地镜像列表</td></tr><tr><td><code>docker pull 镜像:tag</code></td><td>拉取镜像，生产写死具体 tag</td></tr><tr><td><code>docker rmi 镜像</code></td><td>删除本地镜像</td></tr><tr><td><code>docker build -t 名:tag .</code></td><td>按 Dockerfile 构建镜像</td></tr><tr><td><code>docker network ls</code></td><td>列出网络</td></tr><tr><td><code>docker network inspect 网络</code></td><td>网络详情：网段、网关、容器 IP</td></tr><tr><td><code>docker inspect 容器/镜像</code></td><td>完整配置 JSON</td></tr><tr><td><code>docker inspect -f 模板</code></td><td>只取 JSON 里指定的字段</td></tr><tr><td><code>docker port 容器</code></td><td>只看端口映射</td></tr><tr><td><code>docker info</code></td><td>引擎配置与状态</td></tr><tr><td><code>docker stats</code></td><td>实时资源占用，容器版 top</td></tr><tr><td><code>docker system df</code></td><td>镜像&#x2F;容器&#x2F;数据卷磁盘占用</td></tr><tr><td><code>docker compose up -d</code></td><td>按 compose.yaml 拉起整套服务</td></tr><tr><td><code>docker compose down</code></td><td>整套停掉并删容器</td></tr><tr><td><code>docker compose logs -f</code></td><td>聚合跟踪所有服务日志</td></tr></tbody></table><h2 id="写到这里"><a href="#写到这里" class="headerlink" title="写到这里"></a>写到这里</h2><p>Docker 上手的关键是概念先行：镜像是模板、容器是实例、容器生死跟着主进程走、心疼的数据必须挂载出来。这四句话立住之后，命令都只是查表的事。Dockerfile 多阶段构建和 compose 是从”会用”到”用好”的两步——前者让镜像从 GB 瘦到 MB，后者让多服务环境一条命令起停。再往深走就是网络模型和编排（Kubernetes）的领域了，日常开发部署，本文这套已经够用。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> tools </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Docker </tag>
+            
+            <tag> 容器 </tag>
+            
+            <tag> 部署 </tag>
+            
+            <tag> 效率工具 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>tmux 教程：SSH 断线不丢任务、分屏与会话管理</title>
       <link href="/tmux%E6%95%99%E7%A8%8B-SSH%E6%96%AD%E7%BA%BF%E4%B8%8D%E4%B8%A2%E4%BB%BB%E5%8A%A1%E4%B8%8E%E5%88%86%E5%B1%8F%E4%BC%9A%E8%AF%9D%E7%AE%A1%E7%90%86/"/>
       <url>/tmux%E6%95%99%E7%A8%8B-SSH%E6%96%AD%E7%BA%BF%E4%B8%8D%E4%B8%A2%E4%BB%BB%E5%8A%A1%E4%B8%8E%E5%88%86%E5%B1%8F%E4%BC%9A%E8%AF%9D%E7%AE%A1%E7%90%86/</url>
@@ -20,11 +51,11 @@
       
         <tags>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Linux </tag>
             
             <tag> 终端 </tag>
-            
-            <tag> 效率工具 </tag>
             
             <tag> tmux </tag>
             
@@ -148,9 +179,9 @@
             
             <tag> Linux </tag>
             
-            <tag> 网络 </tag>
-            
             <tag> 运维 </tag>
+            
+            <tag> 网络 </tag>
             
         </tags>
       
@@ -830,13 +861,13 @@
             
             <tag> CLI </tag>
             
+            <tag> 效率工具 </tag>
+            
             <tag> Linux </tag>
             
             <tag> 命令行 </tag>
             
             <tag> 终端 </tag>
-            
-            <tag> 效率工具 </tag>
             
         </tags>
       
@@ -861,11 +892,11 @@
       
         <tags>
             
+            <tag> Claude Code </tag>
+            
             <tag> Claude </tag>
             
             <tag> AI </tag>
-            
-            <tag> Claude Code </tag>
             
             <tag> MCP </tag>
             
@@ -894,11 +925,11 @@
       
         <tags>
             
+            <tag> Claude Code </tag>
+            
             <tag> Claude </tag>
             
             <tag> AI </tag>
-            
-            <tag> Claude Code </tag>
             
             <tag> MCP </tag>
             
@@ -927,13 +958,13 @@
       
         <tags>
             
+            <tag> Claude Code </tag>
+            
             <tag> Claude </tag>
             
             <tag> AI </tag>
             
             <tag> Agent </tag>
-            
-            <tag> Claude Code </tag>
             
             <tag> Skill </tag>
             
@@ -960,13 +991,13 @@
       
         <tags>
             
+            <tag> Claude Code </tag>
+            
             <tag> Claude </tag>
             
             <tag> AI </tag>
             
             <tag> Agent </tag>
-            
-            <tag> Claude Code </tag>
             
             <tag> CLI </tag>
             
@@ -995,15 +1026,15 @@
             
             <tag> Claude </tag>
             
-            <tag> Anthropic </tag>
-            
             <tag> AI </tag>
+            
+            <tag> Agent </tag>
+            
+            <tag> Anthropic </tag>
             
             <tag> LLM </tag>
             
             <tag> API </tag>
-            
-            <tag> Agent </tag>
             
         </tags>
       
@@ -1189,9 +1220,9 @@
             
             <tag> CLI </tag>
             
-            <tag> Git </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> Git </tag>
             
             <tag> Mac </tag>
             
