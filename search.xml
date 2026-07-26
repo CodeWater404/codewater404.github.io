@@ -4,6 +4,64 @@
   
     
     <entry>
+      <title>Go 接口设计：接口参数不够用时，该不该加个 struct</title>
+      <link href="/Go%E6%8E%A5%E5%8F%A3%E8%AE%BE%E8%AE%A1-%E5%8F%82%E6%95%B0%E4%B8%8D%E5%A4%9F%E7%94%A8%E6%97%B6%E7%9A%84struct%E5%8C%96%E9%87%8D%E6%9E%84/"/>
+      <url>/Go%E6%8E%A5%E5%8F%A3%E8%AE%BE%E8%AE%A1-%E5%8F%82%E6%95%B0%E4%B8%8D%E5%A4%9F%E7%94%A8%E6%97%B6%E7%9A%84struct%E5%8C%96%E9%87%8D%E6%9E%84/</url>
+      
+        <content type="html"><![CDATA[<p>接入第三方支付渠道时撞上一个很具体的问题：项目里已经有一个通用的支付接口</p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> IPay <span class="keyword">interface</span> &#123;</span><br><span class="line">    QueryOrder(tradeNo, total <span class="type">string</span>) (<span class="keyword">map</span>[<span class="type">string</span>]<span class="keyword">interface</span>&#123;&#125;, <span class="type">error</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>新接入的渠道查单接口要求同时传两个字段：商户这边的订单号，和支付渠道那边自己生成的订单号。可接口签名只有两个 <code>string</code> 参数，位置和语义早被前面的渠道锁死了。</p><span id="more"></span><h2 id="权宜做法：借道传参"><a href="#权宜做法：借道传参" class="headerlink" title="权宜做法：借道传参"></a>权宜做法：借道传参</h2><p>改接口签名意味着要动所有已经接入的渠道实现，压力不小。当时更快的做法是不动签名，在调用方对这个新渠道单独处理，把 <code>total</code> 参数挪过来传渠道订单号：</p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// payment.go 调用方</span></span><br><span class="line"><span class="keyword">if</span> payChannel == <span class="string">&quot;new_channel&quot;</span> &#123;</span><br><span class="line">    _, err = e.QueryOrder(params.OutTradeNo, params.ChannelTradeNo) <span class="comment">// total 借用为渠道订单号</span></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    _, err = e.QueryOrder(queryTradeNo, params.Money)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// new_channel.go 实现方</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(ep *NewChannelPay)</span></span> QueryOrder(tradeNo, total <span class="type">string</span>) (...) &#123;</span><br><span class="line">    params := <span class="keyword">map</span>[<span class="type">string</span>]<span class="keyword">interface</span>&#123;&#125;&#123;</span><br><span class="line">        <span class="string">&quot;order_sn&quot;</span>:  tradeNo,</span><br><span class="line">        <span class="string">&quot;trade_num&quot;</span>: total, <span class="comment">// 按约定解读，实为渠道订单号</span></span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>能跑，问题也确实解决了，但埋下两个雷：<strong>参数的真实语义完全靠注释和口头约定维护</strong>，<code>total</code> 在这个分支里其实是渠道订单号，下一个接手的人如果不看注释，大概率会把它当金额传；<strong>下次再接一个需要额外字段的渠道，又得在调用方加一个 <code>if</code> 分支，同样的补丁打第二次</strong>。接口本该描述”这个方法需要什么数据”，现在变成了”这个方法第二个参数在不同分支里代表不同东西”，签名对读代码的人撒了谎。</p><p>这一招还有个更根本的前提：<strong>这次查询本身用不上金额，才腾得出 <code>total</code> 这个位置去装渠道订单号</strong>。如果新渠道的查单接口同时要商户订单号、渠道订单号、金额三个必填值——两个参数位只够装两个东西，借道传参直接失效，没有第三个位置可以牺牲了。</p><h2 id="不改签名还有别的办法吗"><a href="#不改签名还有别的办法吗" class="headerlink" title="不改签名还有别的办法吗"></a>不改签名还有别的办法吗</h2><p>真到了这一步，如果还想硬撑着不改签名，能想到的办法有两条，但都不算好。</p><p><strong>办法一：把多个值拼进一个字符串</strong></p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// total 参数塞进一个用分隔符拼接的字符串</span></span><br><span class="line">total := params.Money + <span class="string">&quot;|&quot;</span> + params.ChannelTradeNo</span><br><span class="line"></span><br><span class="line"><span class="comment">// 实现方里再拆开</span></span><br><span class="line">parts := strings.Split(total, <span class="string">&quot;|&quot;</span>)</span><br><span class="line">money, channelTradeNo := parts[<span class="number">0</span>], parts[<span class="number">1</span>]</span><br></pre></td></tr></table></figure><p>问题很明显：分隔符本身可能出现在业务数据里（金额格式变化、订单号规则调整），一旦冲突解析就直接错位；这套”打包再解包”的逻辑还分散在调用方和实现方两处，全靠字符串操作，编译器帮不上任何忙，类型系统形同虚设。</p><p><strong>办法二：定义一个可选的能力接口，不动 <code>IPay</code> 本身</strong></p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> IPay <span class="keyword">interface</span> &#123;</span><br><span class="line">    QueryOrder(tradeNo, total <span class="type">string</span>) (<span class="keyword">map</span>[<span class="type">string</span>]<span class="keyword">interface</span>&#123;&#125;, <span class="type">error</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 需要渠道订单号的实现，额外实现这个&quot;能力接口&quot;</span></span><br><span class="line"><span class="keyword">type</span> ChannelTradeNoQuerier <span class="keyword">interface</span> &#123;</span><br><span class="line">    QueryOrderWithChannelTradeNo(tradeNo, channelTradeNo, total <span class="type">string</span>) (<span class="keyword">map</span>[<span class="type">string</span>]<span class="keyword">interface</span>&#123;&#125;, <span class="type">error</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 调用方用类型断言探测这个能力：有就走扩展方法，没有就走老接口</span></span><br><span class="line"><span class="keyword">if</span> q, ok := e.(ChannelTradeNoQuerier); ok &#123;</span><br><span class="line">    resp, err = q.QueryOrderWithChannelTradeNo(params.OutTradeNo, params.ChannelTradeNo, params.Money)</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    resp, err = e.QueryOrder(params.OutTradeNo, params.Money)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>这是 Go 标准库里常见的手法——<code>http.Flusher</code>、<code>io.ReaderFrom</code> 都是同一个思路：主接口保持不变，需要额外能力的实现单独多实现一个接口，调用方用类型断言探测。它确实没有碰 <code>IPay</code> 的签名，类型也是安全的，比字符串拼接靠谱得多。但代价是调用方永远要多写一次类型断言分支，渠道差异越多，这种”能力接口”就定义得越多——真到了每接一个新渠道都要单独定义一个能力接口的地步，维护成本并不比 struct 化更低，只是把复杂度从”改签名”挪到了”接口数量”上。</p><h2 id="行业标准做法：把参数改成-struct"><a href="#行业标准做法：把参数改成-struct" class="headerlink" title="行业标准做法：把参数改成 struct"></a>行业标准做法：把参数改成 struct</h2><p>前面两条办法本质上都是在绕开”改签名”这三个字，绕来绕去反而更麻烦。真正该做的是正面解决——把 <code>QueryOrder</code> 的参数从两个裸 <code>string</code> 改成一个结构体：</p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> QueryOrderReq <span class="keyword">struct</span> &#123;</span><br><span class="line">    OrderSN        <span class="type">string</span> <span class="comment">// 商户订单号</span></span><br><span class="line">    ChannelTradeNo <span class="type">string</span> <span class="comment">// 渠道订单号</span></span><br><span class="line">    Money          <span class="type">string</span> <span class="comment">// 金额</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> IPay <span class="keyword">interface</span> &#123;</span><br><span class="line">    QueryOrder(req QueryOrderReq) (<span class="keyword">map</span>[<span class="type">string</span>]<span class="keyword">interface</span>&#123;&#125;, <span class="type">error</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>调用方统一构造一次 <code>req</code>，每个渠道的实现只取自己需要的字段：</p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">resp, err := e.QueryOrder(QueryOrderReq&#123;</span><br><span class="line">    OrderSN:        params.OutTradeNo,</span><br><span class="line">    ChannelTradeNo: params.ChannelTradeNo,</span><br><span class="line">    Money:          params.Money,</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure><p><code>NewChannelPay</code> 只关心 <code>OrderSN</code> 和 <code>ChannelTradeNo</code>，老渠道的实现只关心 <code>OrderSN</code> 和 <code>Money</code>——各取所需，不用再靠位置和注释猜语义。</p><h2 id="为什么这是非破坏性变更"><a href="#为什么这是非破坏性变更" class="headerlink" title="为什么这是非破坏性变更"></a>为什么这是非破坏性变更</h2><p>这个重构能落地的关键，在于 Go 的一个具体规则：<strong>struct 里没有显式赋值的字段，会被自动填成对应类型的零值</strong>（<code>string</code> 是 <code>&quot;&quot;</code>，<code>int</code> 是 <code>0</code>，指针是 <code>nil</code>）。这意味着以后再接入第三个渠道，需要一个新字段（比如 <code>SubMerchantID</code>），只需要在 <code>QueryOrderReq</code> 里加一行：</p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> QueryOrderReq <span class="keyword">struct</span> &#123;</span><br><span class="line">    OrderSN        <span class="type">string</span></span><br><span class="line">    ChannelTradeNo <span class="type">string</span></span><br><span class="line">    Money          <span class="type">string</span></span><br><span class="line">    SubMerchantID  <span class="type">string</span> <span class="comment">// 新增字段</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>已有的调用方和渠道实现完全不用跟着改——它们构造 <code>QueryOrderReq&#123;&#125;</code> 时没有填 <code>SubMerchantID</code>，这个字段自动是空字符串，对现有逻辑没有任何影响。接口签名 <code>QueryOrder(req QueryOrderReq)</code> 本身也没变，不需要重新实现 <code>IPay</code> 接口的任何一方跟着改代码。对比一下如果参数还是摊平的裸参数列表，新增一个字段就必须在签名里加一个新参数，所有实现方和调用方都要同步改——struct 把”新增字段”和”新增参数”两件事彻底解耦了。</p><h2 id="两个方案的差距在哪"><a href="#两个方案的差距在哪" class="headerlink" title="两个方案的差距在哪"></a>两个方案的差距在哪</h2><p><strong>改动面</strong>：借道传参每加一个特殊渠道就要在调用方加一个 <code>if</code> 分支，改动分散在业务逻辑里，容易漏改；struct 方案只需要在类型定义里加一行字段，调用方和实现方按需读取，不需要为了兼容新字段去改无关渠道的代码。</p><p><strong>可读性</strong>：<code>e.QueryOrder(tradeNo, total)</code> 光看调用点完全猜不出 <code>total</code> 在这个分支里到底传的是什么，必须跳到实现代码里看注释；<code>req.ChannelTradeNo</code> 这种写法字段名本身就是文档，不需要额外解释。</p><p><strong>扩展成本</strong>：借道传参的扩展成本是递增的——渠道越多，需要记住的”第几个参数在第几个渠道分支里代表什么”这张隐藏对照表就越复杂；struct 方案的扩展成本基本是常数——不管接入多少个渠道，加字段永远是同一个动作，加一行定义。</p><h2 id="这不是唯一的行业选项"><a href="#这不是唯一的行业选项" class="headerlink" title="这不是唯一的行业选项"></a>这不是唯一的行业选项</h2><p>参数膨胀是个很常见的问题，Go 里针对不同场景有几种不同的标准解法，struct 化只是其中处理”必填数据字段变多”这一种情况的方案：</p><p>如果膨胀的是<strong>可选参数</strong>而不是必填字段（比如构造函数大部分调用只需要默认值，少数场景要覆盖某几项），更合适的是<a href="/Go%E5%87%BD%E6%95%B0%E5%BC%8F%E9%80%89%E9%A1%B9%E6%A8%A1%E5%BC%8F-%E4%BC%98%E9%9B%85%E5%A4%84%E7%90%86%E5%8F%AF%E9%80%89%E5%8F%82%E6%95%B0">函数式选项模式</a>——用一串 <code>WithXxx(...)</code> 函数而不是一个必须显式填满的 struct，调用方不用关心的选项完全不用出现在调用点上。</p><p>如果要传递的是<strong>跨调用链的请求域数据</strong>（trace ID、认证信息这类”跟这次请求绑定、但不是这个函数业务逻辑本身需要的参数”），应该用 <a href="/GoContext%E5%AE%9E%E6%88%98-%E8%B6%85%E6%97%B6%E5%8F%96%E6%B6%88%E4%B8%8E%E8%B7%A8%E5%8D%8F%E7%A8%8B%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92">Context 的 WithValue</a>，而不是把它们也塞进业务 struct 里跟真正的业务参数混在一起。</p><p>三者的分界线很清楚：<strong>业务必填、调用点固定知道要传什么</strong> 用 struct；<strong>可选、不同调用方按需覆盖</strong> 用 Option；<strong>跟请求生命周期绑定、多层调用都可能要用但和当前函数的业务逻辑无关</strong> 用 Context。<code>QueryOrderReq</code> 里的商户订单号、渠道订单号都是业务必填字段，这次重构选 struct 是对的，换成传 trace ID 或者做成一堆 <code>WithXxx</code> 反而是把简单问题复杂化。</p><h2 id="什么时候该动手-struct-化"><a href="#什么时候该动手-struct-化" class="headerlink" title="什么时候该动手 struct 化"></a>什么时候该动手 struct 化</h2><p>不是所有接口都要一上来就传 struct——两个参数、以后大概率不会再加字段的场景，裸参数反而更直接。真正该考虑 struct 化的信号是：<strong>参数超过 2-3 个同类型的值</strong>（比如这个例子里全是 <code>string</code>，位置很容易传错也很容易看花眼），或者<strong>能预见到以后还会继续加字段</strong>（对接第三方系统尤其明显，几乎每接一个新的都会多几个专属字段）。这个场景符合两条信号中的任意一条，其实就该在设计接口的第一天直接用 struct，不用等到打了第一个补丁才回头重构。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> golang </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Go </tag>
+            
+            <tag> 接口设计 </tag>
+            
+            <tag> 重构 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Postman 进阶技巧：告别手动复制粘贴的高效用法</title>
+      <link href="/Postman%E8%BF%9B%E9%98%B6%E6%8A%80%E5%B7%A7-%E8%87%AA%E5%8A%A8%E5%8C%96%E8%AE%A4%E8%AF%81%E4%B8%8E%E6%89%B9%E9%87%8F%E6%B5%8B%E8%AF%95%E5%AE%9E%E6%88%98/"/>
+      <url>/Postman%E8%BF%9B%E9%98%B6%E6%8A%80%E5%B7%A7-%E8%87%AA%E5%8A%A8%E5%8C%96%E8%AE%A4%E8%AF%81%E4%B8%8E%E6%89%B9%E9%87%8F%E6%B5%8B%E8%AF%95%E5%AE%9E%E6%88%98/</url>
+      
+        <content type="html"><![CDATA[<p>大部分人对 <a href="https://www.postman.com/">Postman</a> 的印象停留在”图形化的 curl”：填个 URL，点 Send，看返回。这样用完全没问题，但真正拖慢效率的是那些重复劳动——测个受保护的接口，先手动调登录接口拿 token，再复制粘贴到别的请求头里，改天 token 过期了再来一遍；测试数据每次都手打；换个环境要把 URL 里的域名一个个改掉。这些事 Postman 本身都有办法自动化掉。</p><span id="more"></span><h2 id="变量与作用域：环境切换不用改一行-URL"><a href="#变量与作用域：环境切换不用改一行-URL" class="headerlink" title="变量与作用域：环境切换不用改一行 URL"></a>变量与作用域：环境切换不用改一行 URL</h2><p>Postman 的变量分五层作用域，从大到小：<strong>Global</strong>（跨集合全局共用）、<strong>Collection</strong>（整个集合共用）、<strong>Environment</strong>（当前选中的环境，比如 dev&#x2F;staging）、<strong>Data</strong>（Collection Runner&#x2F;Postman CLI 批量跑时从 CSV&#x2F;JSON 文件读进来的数据集变量）、<strong>Local</strong>（只在当前请求脚本运行期间有效）。同名变量作用域越小优先级越高，按 Local &gt; Data &gt; Environment &gt; Collection &gt; Global 取值。</p><pre><code class="highlight mermaid">flowchart TD    G[&quot;Global 全局变量&quot;] --&gt; C[&quot;Collection 集合变量&quot;]    C --&gt; E[&quot;Environment 环境变量&quot;]    E --&gt; D[&quot;Data 数据集变量（Runner/CLI）&quot;]    D --&gt; L[&quot;Local 脚本运行时变量&quot;]    L -.同名覆盖.-&gt; D    D -.同名覆盖.-&gt; E    E -.同名覆盖.-&gt; C    C -.同名覆盖.-&gt; G</code></pre><p>这五层不是随处可见，各自的设置入口容易漏看：<strong>Global</strong> 在界面底部点 <strong>Globals</strong> 就能打开，不依赖任何环境；<strong>Collection</strong> 在集合的 Variables 标签页里设置；<strong>Environment</strong> 得先建一个环境（右上角环境下拉框选 <strong>Create One</strong>）并切换过去，才会出现对应的变量面板——如果一直停留在 “No Environment”，自然找不到这个入口；<strong>Data</strong> 不是”设置”出来的，是跑 Collection Runner 或 Postman CLI 时挂载的外部 CSV&#x2F;JSON 文件；<strong>Local</strong> 干脆没有持久化的设置面板，只能在 Pre-request&#x2F;Post-response 脚本里用 <code>pm.variables.set()</code> 临时写入，运行结束就清空。</p><p>实操上最常见的用法：把请求里的域名换成变量，<code>&#123;&#123;base_url&#125;&#125;/users</code> 代替 <code>https://api.dev.example.com/users</code>，再建三个环境 dev&#x2F;staging&#x2F;prod，分别把 <code>base_url</code> 设成对应的域名。测试环境切换只需要在右上角环境下拉框里换一下，不用去改任何一个请求的 URL。</p><h2 id="Scripts：自动登录、自动续-Token"><a href="#Scripts：自动登录、自动续-Token" class="headerlink" title="Scripts：自动登录、自动续 Token"></a>Scripts：自动登录、自动续 Token</h2><p>Postman v11 之后把原来分开的 “Pre-request Script” 标签和 “Tests” 标签合并进统一的 <strong>Scripts</strong> 标签页，里面再分 Pre-request（请求发出前执行）和 Post-response（拿到响应后执行，就是老版本”Tests”标签做的事）两个子标签。名字变了，脚本能力和写法没变。</p><h3 id="脚本语法速览：pm-对象怎么用"><a href="#脚本语法速览：pm-对象怎么用" class="headerlink" title="脚本语法速览：pm 对象怎么用"></a>脚本语法速览：pm 对象怎么用</h3><p>这两个标签页里写的都是普通 JavaScript，跑在 Postman 自带的沙箱环境里（不是完整 Node.js，不能 <code>require</code> 任意 npm 包，但内置了几个常用库，比如后面会用到的 <code>pm.sendRequest</code>）。所有跟 Postman 本身打交道的操作，都通过一个全局对象 <code>pm</code> 完成，新手只需要先认全这几个最常用的：</p><ul><li><code>pm.environment.get(name)</code> &#x2F; <code>pm.environment.set(name, value)</code>：读写当前选中 Environment 里的变量</li><li><code>pm.collectionVariables.get/set</code>、<code>pm.globals.get/set</code>：分别读写 Collection 变量和 Global 变量，用法跟 environment 那一对完全一样，只是作用域不同（见上一节的作用域讲解）</li><li><code>pm.request</code>：仅在 Pre-request 脚本里有意义，代表”即将发出的这个请求”，比如 <code>pm.request.headers</code></li><li><code>pm.response</code>：仅在 Post-response 脚本里有意义，代表”刚收到的响应”，<code>pm.response.json()</code> 把响应体解析成对象，<code>pm.response.code</code> 是状态码</li><li><code>pm.test(name, fn)</code> + <code>pm.expect(...)</code>：写断言用的，<code>pm.test</code> 定义一条测试用例，<code>pm.expect</code> 是断言语法（跟 JS 测试框架 Chai 用法一致）</li><li><code>console.log(...)</code>：输出到 Postman 自带的调试台，菜单栏 <strong>View → Show Postman Console</strong> 打开，脚本报错或者变量值不对，先来这里看</li></ul><p>一个最小的 Post-response 例子，跑完就能在 Postman Console 里看到打印结果：</p><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Scripts → Post-response</span></span><br><span class="line">pm.<span class="title function_">test</span>(<span class="string">&quot;状态码是 200&quot;</span>, <span class="keyword">function</span> (<span class="params"></span>) &#123;</span><br><span class="line">    pm.<span class="property">response</span>.<span class="property">to</span>.<span class="property">have</span>.<span class="title function_">status</span>(<span class="number">200</span>);</span><br><span class="line">    <span class="comment">// pm.response.to.have.status(...) 是 pm.response 提供的语法糖，</span></span><br><span class="line">    <span class="comment">// 断言失败会让这条请求在 Runner/CLI 里显示为不通过</span></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> data = pm.<span class="property">response</span>.<span class="title function_">json</span>();</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;拿到的 user id:&quot;</span>, data.<span class="property">id</span>); <span class="comment">// 在 Postman Console 里能看到这行输出</span></span><br></pre></td></tr></table></figure><p>Pre-request 脚本写法一样，只是没有 <code>pm.response</code>（响应还没收到），常见用途是提前算好一个值塞进变量：</p><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Scripts → Pre-request</span></span><br><span class="line">pm.<span class="property">environment</span>.<span class="title function_">set</span>(<span class="string">&quot;request_time&quot;</span>, <span class="title class_">Date</span>.<span class="title function_">now</span>());</span><br><span class="line"><span class="comment">// 后面这次请求里可以用 &#123;&#123;request_time&#125;&#125; 引用这个刚算出来的时间戳</span></span><br></pre></td></tr></table></figure><p>认清这几个对象和调用方式之后，下面这几个自动化场景的脚本就是同一套语法的组合应用，不用死记硬背。</p><h3 id="登录一次，后面全自动带上-token"><a href="#登录一次，后面全自动带上-token" class="headerlink" title="登录一次，后面全自动带上 token"></a>登录一次，后面全自动带上 token</h3><p>在”登录”请求的 <strong>Scripts → Post-response</strong> 里写：</p><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> data = pm.<span class="property">response</span>.<span class="title function_">json</span>();</span><br><span class="line">pm.<span class="property">environment</span>.<span class="title function_">set</span>(<span class="string">&quot;token&quot;</span>, data.<span class="property">access_token</span>);</span><br><span class="line"><span class="comment">// pm.environment.set：把值写进当前选中的 Environment，</span></span><br><span class="line"><span class="comment">// 后面任何请求都能用 &#123;&#123;token&#125;&#125; 取到，不用手动复制</span></span><br></pre></td></tr></table></figure><p>后续所有需要鉴权的请求，Header 里写 <code>Authorization: Bearer &#123;&#123;token&#125;&#125;</code>，就不用每次手动去登录接口的返回里复制那一长串 token 了——发一次登录请求，<code>token</code> 变量自动就位。</p><h3 id="进阶：过期自动重新登录"><a href="#进阶：过期自动重新登录" class="headerlink" title="进阶：过期自动重新登录"></a>进阶：过期自动重新登录</h3><p>如果嫌”忘了重新登录导致后面请求全部 401”烦，可以把检查逻辑写到 <strong>Collection 级别的 Pre-request Script</strong>（在 Collection 的设置里编辑，会在集合下每一个请求发出前先执行一遍）：</p><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> expiresAt = pm.<span class="property">environment</span>.<span class="title function_">get</span>(<span class="string">&quot;token_expires_at&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!expiresAt || <span class="title class_">Date</span>.<span class="title function_">now</span>() &gt; <span class="title class_">Number</span>(expiresAt)) &#123;</span><br><span class="line">    <span class="keyword">const</span> loginRes = pm.<span class="title function_">sendRequest</span>(&#123;</span><br><span class="line">        <span class="attr">url</span>: pm.<span class="property">environment</span>.<span class="title function_">get</span>(<span class="string">&quot;base_url&quot;</span>) + <span class="string">&quot;/login&quot;</span>,</span><br><span class="line">        <span class="attr">method</span>: <span class="string">&quot;POST&quot;</span>,</span><br><span class="line">        <span class="attr">header</span>: &#123; <span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;application/json&quot;</span> &#125;,</span><br><span class="line">        <span class="attr">body</span>: &#123;</span><br><span class="line">            <span class="attr">mode</span>: <span class="string">&quot;raw&quot;</span>,</span><br><span class="line">            <span class="attr">raw</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(&#123; <span class="attr">username</span>: <span class="string">&quot;demo&quot;</span>, <span class="attr">password</span>: <span class="string">&quot;demo123&quot;</span> &#125;)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="comment">// pm.sendRequest 是同步阻塞的，在 Pre-request 脚本里可以直接拿到结果用</span></span><br><span class="line">    <span class="keyword">const</span> data = loginRes.<span class="title function_">json</span>();</span><br><span class="line">    pm.<span class="property">environment</span>.<span class="title function_">set</span>(<span class="string">&quot;token&quot;</span>, data.<span class="property">access_token</span>);</span><br><span class="line">    pm.<span class="property">environment</span>.<span class="title function_">set</span>(<span class="string">&quot;token_expires_at&quot;</span>, <span class="title class_">Date</span>.<span class="title function_">now</span>() + data.<span class="property">expires_in</span> * <span class="number">1000</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>这段脚本挂在 Collection 上之后，集合里任何一个请求发出前都会先检查 <code>token</code> 是不是快过期了，过期就自动重新登录换新的，业务请求本身完全不用关心鉴权这件事。</p><h2 id="动态变量：测试数据不用手写"><a href="#动态变量：测试数据不用手写" class="headerlink" title="动态变量：测试数据不用手写"></a>动态变量：测试数据不用手写</h2><p>Postman 内置一批以 <code>$</code> 开头的动态变量，值在请求真正发出的那一刻生成，最基础的三个是 <code>&#123;&#123;$guid&#125;&#125;</code>（v4 格式的 GUID）、<code>&#123;&#123;$timestamp&#125;&#125;</code>（当前 Unix 时间戳）、<code>&#123;&#123;$randomInt&#125;&#125;</code>（0-1000 的随机整数）。从 7.2 版本开始接入了 faker.js，扩出一大批更贴近真实数据的变量，比如 <code>&#123;&#123;$randomEmail&#125;&#125;</code>、<code>&#123;&#123;$randomFirstName&#125;&#125;</code>、<code>&#123;&#123;$randomUserName&#125;&#125;</code>。</p><p>测注册接口时，请求体直接写：</p><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;email&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&#123;&#123;$randomEmail&#125;&#125;&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;username&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&#123;&#123;$randomUserName&#125;&#125;&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;requestId&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&#123;&#123;$guid&#125;&#125;&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure><p>每次点 Send，邮箱、用户名都是新的，不用因为”这个邮箱已被注册”这种报错手动改测试数据。</p><h2 id="Postman-Vault：敏感信息不进集合、不同步云端"><a href="#Postman-Vault：敏感信息不进集合、不同步云端" class="headerlink" title="Postman Vault：敏感信息不进集合、不同步云端"></a>Postman Vault：敏感信息不进集合、不同步云端</h2><p>Environment 变量方便，但有个问题：API Key、密码这类东西如果直接明文存在 Environment 变量里，一旦这个 Environment 被导出分享或者同步到 Postman 云端团队空间，敏感信息就跟着一起泄露了。</p><p>Postman 的 <strong>Vault</strong> 就是为这个准备的——存进去的密钥只留在本地（Local Vault），不会同步到云端，也不会被导出的 collection 文件带出去。设置好之后，在任意请求的字段里直接用 <code>&#123;&#123;vault:api-key&#125;&#125;</code> 这种语法引用；脚本里则通过 <code>pm.vault.get(&quot;api-key&quot;)</code> 访问。团队协作分享 collection 时，Vault 里的值不会被带出去，队友本地要用自己单独配置一份。</p><h2 id="批量编辑-headers-params：别一行行加"><a href="#批量编辑-headers-params：别一行行加" class="headerlink" title="批量编辑 headers&#x2F;params：别一行行加"></a>批量编辑 headers&#x2F;params：别一行行加</h2><p>Header 或 Query Param 一多，一行行点加号、填 key、填 value 很浪费时间。Headers&#x2F;Params 表格右上角有个 <strong>Bulk Edit</strong> 按钮，点开切换成纯文本编辑模式，直接粘贴多行 <code>key: value</code>（Headers）或 <code>key=value</code>（Params），保存自动拆成一行行的表格——从接口文档或者旧 curl 命令里复制一段 headers 过来，几秒钟搞定，比逐行填快得多。</p><h2 id="代码互转：Code-生成-curl-导入"><a href="#代码互转：Code-生成-curl-导入" class="headerlink" title="代码互转：Code 生成 + curl 导入"></a>代码互转：Code 生成 + curl 导入</h2><p><strong>从 Postman 导出成代码</strong>：每个请求编辑器右侧有个 <code>&lt;/&gt;</code> Code 按钮，点开能选一堆语言&#x2F;工具的代码片段——curl、JavaScript (fetch&#x2F;axios)、Python (requests)、Go (net&#x2F;http)，把这个请求现在的 URL、Header、Body 原样翻译成对应语言的代码。调好一个请求之后甩给写业务代码的同事，不用他们对着 Postman 界面手抄。</p><p><strong>反过来，把 curl 导入成请求</strong>：点左上角 Import，选 Raw Text，把从浏览器 devtools 复制来的 <code>curl -X POST ...</code> 整段粘贴进去，Postman 会自动解析出 URL、方法、Header、Body，生成一个可以直接编辑运行的请求，不用手动拆 curl 参数一个个填进对应的框。</p><h2 id="批量跑与接入-CI：Runner-面板和-Postman-CLI"><a href="#批量跑与接入-CI：Runner-面板和-Postman-CLI" class="headerlink" title="批量跑与接入 CI：Runner 面板和 Postman CLI"></a>批量跑与接入 CI：Runner 面板和 Postman CLI</h2><p>调好的请求攒成一个 Collection 之后，右上角 <strong>Runner</strong> 面板能把整个 Collection 一次性批量跑一遍，还能配合 CSV&#x2F;JSON 数据文件做参数化——同一套请求，用文件里的每一行数据各跑一次，很适合边界值、批量账号这类重复测试。</p><p>接入 CI 这块要提醒一句：<strong>网上大量教程还在教用 Newman 命令行工具跑 collection 接 CI，这个方案已经过时了</strong>。Postman 官方在 2026 年 4 月的博客里明确说明不再维护 Newman，而且 Newman 不兼容 Postman v12 开始使用的 collection v3 格式。现在官方推荐的是 <strong>Postman CLI</strong>：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">curl -o- <span class="string">&quot;https://dl-cli.pstmn.io/install/unix.sh&quot;</span> | sh</span><br><span class="line"><span class="comment">#    官方安装脚本，Unix/macOS 通用；也可以用 npm i postman-cli</span></span><br><span class="line"></span><br><span class="line">postman login --with-api-key &lt;your-api-key&gt;</span><br><span class="line"><span class="comment">#    --with-api-key：用 API Key 登录，CI 环境里免交互，key 从 Postman 账号设置里生成</span></span><br><span class="line"></span><br><span class="line">postman collection run &lt;collection-id&gt; -e &lt;environment-id&gt;</span><br><span class="line"><span class="comment">#    &lt;collection-id&gt;：要跑的集合 ID，在 Postman 里分享/导出集合时能拿到</span></span><br><span class="line"><span class="comment">#    -e：指定用哪个 environment 跑</span></span><br></pre></td></tr></table></figure><p>这条命令跑完会在终端里输出每个请求的通过&#x2F;失败情况，登录状态下结果还会同步回 Postman 云端，比 Newman 更适合塞进现在的 CI pipeline。如果项目还在用旧的 Newman 命令，趁早换成这套。</p><h2 id="Mock-Server：没有真后端也能先联调"><a href="#Mock-Server：没有真后端也能先联调" class="headerlink" title="Mock Server：没有真后端也能先联调"></a>Mock Server：没有真后端也能先联调</h2><p>前后端约定好接口文档之后，不用等后端把接口全部写完，用 <strong>Mock Server</strong> 直接把约定好的返回值模拟出来——建一个 Mock Server，绑定到某个 Collection，Collection 里每个请求上例子（Example）里写的返回数据，就是 Mock Server 实际返回的内容。前端拿着 Mock Server 给的 URL 当作真实后端地址开发，后端接口写完之后原地切换成真实域名即可，两边不互相等。</p><h2 id="小结：把重复劳动交给-Postman-自己"><a href="#小结：把重复劳动交给-Postman-自己" class="headerlink" title="小结：把重复劳动交给 Postman 自己"></a>小结：把重复劳动交给 Postman 自己</h2><p>这几个技巧共同的思路是同一个：<strong>只要是”每次测试都要重复做的手动操作”，Postman 大概率已经有办法自动化</strong>——变量解决”环境&#x2F;数据到处改”，Scripts 解决”手动传令牌”，Bulk Edit 和代码生成解决”重复敲字”，Runner&#x2F;CLI 解决”批量跑和接 CI”。日常测几个接口不需要样样都用上，但一旦项目里同一套接口要反复测、多人协作维护，这些进阶用法省下来的时间是实打实的。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> tools </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 效率工具 </tag>
+            
+            <tag> Postman </tag>
+            
+            <tag> API测试 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Go Context 实战：超时、取消与跨协程数据传递</title>
       <link href="/GoContext%E5%AE%9E%E6%88%98-%E8%B6%85%E6%97%B6%E5%8F%96%E6%B6%88%E4%B8%8E%E8%B7%A8%E5%8D%8F%E7%A8%8B%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92/"/>
       <url>/GoContext%E5%AE%9E%E6%88%98-%E8%B6%85%E6%97%B6%E5%8F%96%E6%B6%88%E4%B8%8E%E8%B7%A8%E5%8D%8F%E7%A8%8B%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92/</url>
@@ -946,9 +1004,9 @@
       
         <tags>
             
-            <tag> CLI </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> CLI </tag>
             
             <tag> Linux </tag>
             
@@ -979,11 +1037,11 @@
       
         <tags>
             
-            <tag> Claude Code </tag>
-            
             <tag> Claude </tag>
             
             <tag> AI </tag>
+            
+            <tag> Claude Code </tag>
             
             <tag> MCP </tag>
             
@@ -1012,11 +1070,11 @@
       
         <tags>
             
-            <tag> Claude Code </tag>
-            
             <tag> Claude </tag>
             
             <tag> AI </tag>
+            
+            <tag> Claude Code </tag>
             
             <tag> MCP </tag>
             
@@ -1045,13 +1103,13 @@
       
         <tags>
             
-            <tag> Claude Code </tag>
-            
             <tag> Claude </tag>
             
             <tag> AI </tag>
             
             <tag> Agent </tag>
+            
+            <tag> Claude Code </tag>
             
             <tag> Skill </tag>
             
@@ -1078,13 +1136,13 @@
       
         <tags>
             
-            <tag> Claude Code </tag>
-            
             <tag> Claude </tag>
             
             <tag> AI </tag>
             
             <tag> Agent </tag>
+            
+            <tag> Claude Code </tag>
             
             <tag> CLI </tag>
             
@@ -1113,15 +1171,15 @@
             
             <tag> Claude </tag>
             
-            <tag> AI </tag>
-            
-            <tag> Agent </tag>
-            
             <tag> Anthropic </tag>
+            
+            <tag> AI </tag>
             
             <tag> LLM </tag>
             
             <tag> API </tag>
+            
+            <tag> Agent </tag>
             
         </tags>
       
@@ -1237,9 +1295,9 @@
       
         <tags>
             
-            <tag> CLI </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> CLI </tag>
             
             <tag> Mac </tag>
             
@@ -1272,9 +1330,9 @@
       
         <tags>
             
-            <tag> CLI </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> CLI </tag>
             
             <tag> Mac </tag>
             
@@ -1305,9 +1363,9 @@
       
         <tags>
             
-            <tag> CLI </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> CLI </tag>
             
             <tag> Git </tag>
             
@@ -1340,9 +1398,9 @@
       
         <tags>
             
-            <tag> CLI </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> CLI </tag>
             
             <tag> Mac </tag>
             
@@ -1375,9 +1433,9 @@
       
         <tags>
             
-            <tag> CLI </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> CLI </tag>
             
             <tag> Mac </tag>
             
@@ -1406,9 +1464,9 @@
       
         <tags>
             
-            <tag> CLI </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> CLI </tag>
             
             <tag> Mac </tag>
             
@@ -1538,9 +1596,9 @@
       
         <tags>
             
-            <tag> CLI </tag>
-            
             <tag> 效率工具 </tag>
+            
+            <tag> CLI </tag>
             
             <tag> Mac </tag>
             
