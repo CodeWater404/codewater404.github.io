@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://blog.codewater.top/Git%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B-%E5%8E%9F%E7%90%86%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BC%81%E4%B8%9A%E5%AE%9E%E8%B7%B5/</loc>
+    <lastmod>2026-09-21</lastmod>
+  </url>
+  <url>
     <loc>https://blog.codewater.top/neovim-lazyvim-%E7%BB%88%E7%AB%AF%E7%BC%96%E8%BE%91%E5%99%A8/</loc>
     <lastmod>2026-09-21</lastmod>
   </url>
@@ -110,10 +114,6 @@
   </url>
   <url>
     <loc>https://blog.codewater.top/ln%E8%BD%AF%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%AE%9E%E6%88%98-inode%E4%B8%8E%E7%9B%B8%E5%AF%B9%E8%B7%AF%E5%BE%84%E5%9D%91/</loc>
-    <lastmod>2026-07-17</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.codewater.top/Git%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B-%E5%8E%9F%E7%90%86%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BC%81%E4%B8%9A%E5%AE%9E%E8%B7%B5/</loc>
     <lastmod>2026-07-17</lastmod>
   </url>
   <url>
